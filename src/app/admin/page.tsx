@@ -1593,7 +1593,7 @@ export default function AdminDashboard() {
               border: '1px solid rgba(212, 164, 75, 0.1)',
               display: 'flex',
               alignItems: 'center',
-              justify: 'center',
+              justifyContent: 'center',
               overflow: 'hidden',
               marginBottom: '25px',
               background: 'rgba(0, 0, 0, 0.4)'

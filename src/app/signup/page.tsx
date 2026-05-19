@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '../actions/auth';
 import { Mail, Lock, User, UserPlus, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
 
-export default function SignupPage() {
+function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -333,5 +333,27 @@ export default function SignupPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: '#0B0705',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--primary)',
+        fontFamily: 'var(--font-cormorant)',
+        fontSize: '1.5rem',
+        letterSpacing: '0.1em'
+      }}>
+        LOADING SALOON LOBBY...
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }

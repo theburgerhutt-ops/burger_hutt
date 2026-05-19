@@ -607,7 +607,7 @@ export default function ProfilePage() {
         </div>
 
         {/* Order History Title */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyStyle: 'space-between', marginBottom: '25px', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '25px', justifyContent: 'space-between' }}>
           <h3 style={{ fontSize: '1.8rem', color: '#fff', fontFamily: 'var(--font-cormorant)', margin: 0 }}>
             BURGER <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>HISTORY</span>
           </h3>
