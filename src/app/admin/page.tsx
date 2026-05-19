@@ -1,0 +1,1974 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  LayoutDashboard, 
+  ShoppingCart, 
+  Users, 
+  Settings, 
+  Package, 
+  TrendingUp, 
+  RefreshCw, 
+  Plus, 
+  Trash2, 
+  Check, 
+  Star, 
+  Tag, 
+  Image, 
+  DollarSign, 
+  Bell, 
+  X 
+} from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { menuData } from '@/data/menu';
+import styles from './Admin.module.css';
+
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'inventory' | 'staff' | 'gallery' | 'offers' | 'reviews' | 'settings'>('dashboard');
+  const [toast, setToast] = useState<{ id: string; title: string; body: string; time: string } | null>(null);
+  const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+
+  // Stats State
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalRevenue: 0,
+    pendingOrders: 0,
+  });
+
+  // Business Control Settings
+  const [controls, setControls] = useState({
+    isOpen: true,
+    allowDelivery: true,
+    freeDeliveryLimit: 1200,
+    surgePricing: false
+  });
+
+  // 1. Orders Data State (initialized clean)
+  const [orders, setOrders] = useState<any[]>([]);
+
+  // 2. Menu Items Data State (initialized clean)
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+
+  // New Menu Item Form State
+  const [newItem, setNewItem] = useState({
+    name: '',
+    category: 'burgers',
+    price: '',
+    description: '',
+    isSpicy: false,
+    isVeg: false,
+    isBestseller: false
+  });
+
+  // 3. Inventory Stock State
+  const [inventory, setInventory] = useState<any[]>([
+    { id: 'i-1', name: 'Angus Beef Patties', quantity: 82, minRequired: 30, unit: 'pcs' },
+    { id: 'i-2', name: '24K Gold Leaves', quantity: 8, minRequired: 15, unit: 'sheets' },
+    { id: 'i-3', name: 'Brioche Burger Buns', quantity: 120, minRequired: 40, unit: 'pcs' },
+    { id: 'i-4', name: 'Truffle Mayo Spread', quantity: 3.5, minRequired: 5, unit: 'kg' },
+    { id: 'i-5', name: 'Aged Cheddar Slices', quantity: 95, minRequired: 35, unit: 'pcs' }
+  ]);
+
+  // 4. Staff List State (initialized clean)
+  const [staff, setStaff] = useState<any[]>([]);
+
+  const [newStaff, setNewStaff] = useState({ name: '', role: 'Chef', contact: '' });
+
+  // 5. Gallery Images State (initialized clean)
+  const [gallery, setGallery] = useState<any[]>([]);
+
+  const [newGalleryUrl, setNewGalleryUrl] = useState('');
+  const [newGalleryTitle, setNewGalleryTitle] = useState('');
+
+  // 6. Offers Mock State (initialized clean)
+  const [offers, setOffers] = useState<any[]>([]);
+
+  const [newOfferCode, setNewOfferCode] = useState('');
+  const [newOfferDiscount, setNewOfferDiscount] = useState('');
+
+  // 7. Customer Reviews State (initialized clean)
+  const [reviews, setReviews] = useState<any[]>([]);
+
+  // Walk-in Order State
+  const [showWalkInModal, setShowWalkInModal] = useState(false);
+  const [walkInCustomer, setWalkInCustomer] = useState({
+    name: 'Walk-in Guest',
+    phone: '',
+    address: 'Dine-In',
+    paymentMethod: 'Cash',
+    paymentStatus: 'paid',
+    status: 'preparing'
+  });
+  const [walkInCart, setWalkInCart] = useState<any[]>([]);
+  const [selectedMenuItemId, setSelectedMenuItemId] = useState('');
+  const [selectedItemQty, setSelectedItemQty] = useState(1);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const handleAddWalkInCart = () => {
+    if (!selectedMenuItemId) return;
+    const item = menuData.find(m => m.id === selectedMenuItemId);
+    if (!item) return;
+
+    const existing = walkInCart.find(c => c.id === item.id);
+    if (existing) {
+      setWalkInCart(walkInCart.map(c => c.id === item.id ? { ...c, quantity: c.quantity + selectedItemQty } : c));
+    } else {
+      setWalkInCart([...walkInCart, {
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: selectedItemQty
+      }]);
+    }
+    setSelectedItemQty(1);
+  };
+
+  const handlePlaceWalkInOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (walkInCart.length === 0) {
+      alert('Your walk-in order cart is empty! Please add some menu items first.');
+      return;
+    }
+
+    try {
+      const generatedOrderId = `TBH-WI-${Math.floor(1000 + Math.random() * 9000)}`;
+      const totalAmount = walkInCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([
+          {
+            payment_id: walkInCustomer.paymentMethod === 'Online UPI' ? 'UPI-COUNTER' : 'CASH-COUNTER',
+            order_id: generatedOrderId,
+            customer_name: walkInCustomer.name || 'Walk-in Guest',
+            customer_phone: walkInCustomer.phone || '0000000000',
+            customer_address: walkInCustomer.address || 'Dine-In',
+            items: walkInCart,
+            total_amount: totalAmount,
+            status: walkInCustomer.status,
+            created_at: new Date().toISOString(),
+            payment_method: walkInCustomer.paymentMethod,
+            payment_status: walkInCustomer.paymentStatus,
+            screenshot_url: null
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const newOrder = data[0];
+        const mappedNew = {
+          id: newOrder.id,
+          order_id: newOrder.order_id,
+          customer_name: newOrder.customer_name,
+          customer_phone: newOrder.customer_phone,
+          customer_address: newOrder.customer_address,
+          items: typeof newOrder.items === 'string' ? JSON.parse(newOrder.items) : newOrder.items,
+          total_amount: newOrder.total_amount,
+          payment_method: newOrder.payment_method,
+          payment_status: newOrder.payment_status || 'paid',
+          status: newOrder.status,
+          created_at: newOrder.created_at,
+          screenshot_url: newOrder.screenshot_url
+        };
+
+        const updatedOrders = [mappedNew, ...orders];
+        setOrders(updatedOrders);
+        recalculateStats(updatedOrders);
+        playNotificationSound();
+
+        setWalkInCart([]);
+        setWalkInCustomer({
+          name: 'Walk-in Guest',
+          phone: '',
+          address: 'Dine-In',
+          paymentMethod: 'Cash',
+          paymentStatus: 'paid',
+          status: 'preparing'
+        });
+        setShowWalkInModal(false);
+        alert(`🎉 Walk-in order placed successfully! Order ID: ${generatedOrderId}`);
+      }
+    } catch (err: any) {
+      console.error('Error placing walk-in order:', err);
+      alert(`Failed to save walk-in order: ${err.message || err}`);
+    }
+  };
+
+  // Audio Play Chime Logic
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.volume = 1.0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => console.log('Audio auto-play prevented', error));
+      }
+    } catch (e) {
+      console.log('Audio chime error', e);
+    }
+  };
+
+  // Load real orders from Supabase on mount & setup real-time listener
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        if (data && data.length > 0) {
+          // Map backend schema columns to the component fields
+          const mappedOrders = data.map((o: any) => ({
+            id: o.id,
+            order_id: o.order_id,
+            customer_name: o.customer_name,
+            customer_phone: o.customer_phone,
+            customer_address: o.customer_address,
+            items: typeof o.items === 'string' ? JSON.parse(o.items) : o.items,
+            total_amount: o.total_amount,
+            payment_method: o.payment_method,
+            payment_status: o.payment_status || (o.status === 'delivered' ? 'paid' : 'pending'),
+            status: o.status,
+            created_at: o.created_at,
+            screenshot_url: o.screenshot_url
+          }));
+          setOrders(mappedOrders);
+          recalculateStats(mappedOrders);
+        }
+      } catch (err) {
+        console.error('Error loading admin orders:', err);
+      }
+    };
+
+    const fetchReviews = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('reviews')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (data) {
+          setReviews(data);
+        }
+      } catch (err) {
+        console.error('Error loading admin reviews:', err);
+      }
+    };
+
+    fetchOrders();
+    fetchReviews();
+
+    // Subscribe to new order entries
+    const subscription = supabase
+      .channel('public:orders')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+        const newOrder = payload.new;
+        const mappedNew = {
+          id: newOrder.id,
+          order_id: newOrder.order_id,
+          customer_name: newOrder.customer_name,
+          customer_phone: newOrder.customer_phone,
+          customer_address: newOrder.customer_address,
+          items: typeof newOrder.items === 'string' ? JSON.parse(newOrder.items) : newOrder.items,
+          total_amount: newOrder.total_amount,
+          payment_method: newOrder.payment_method,
+          payment_status: newOrder.payment_status || 'pending',
+          status: newOrder.status,
+          created_at: newOrder.created_at,
+          screenshot_url: newOrder.screenshot_url
+        };
+        
+        setOrders(prev => [mappedNew, ...prev]);
+        setToast({
+          id: `toast-${Date.now()}`,
+          title: '⚡ LIVE ORDER PLACED!',
+          body: `${mappedNew.customer_name} just ordered (Total: ₹${mappedNew.total_amount})`,
+          time: 'Just now'
+        });
+        playNotificationSound();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Update Stats Helper
+  const recalculateStats = (currentOrders: any[]) => {
+    const total = currentOrders.length;
+    const rev = currentOrders
+      .filter(o => o.payment_status === 'paid' && o.status !== 'cancelled')
+      .reduce((sum, o) => sum + o.total_amount, 0);
+    const pend = currentOrders.filter(o => o.status === 'pending' || o.status === 'pending_verification').length;
+    setStats({ totalOrders: total, totalRevenue: rev, pendingOrders: pend });
+  };
+
+  // 1. Orders Actions
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ 
+          status: newStatus,
+          payment_status: newStatus === 'delivered' ? 'paid' : undefined
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      const updated = orders.map(o => {
+        if (o.id === id) {
+          return { 
+            ...o, 
+            status: newStatus,
+            payment_status: newStatus === 'delivered' ? 'paid' : o.payment_status
+          };
+        }
+        return o;
+      });
+      setOrders(updated);
+      recalculateStats(updated);
+    } catch (err) {
+      console.error('Error changing order status:', err);
+      alert('Failed to update status in database.');
+    }
+  };
+
+  const handleVerifyPayment = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ payment_status: 'paid', status: 'preparing' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      const updated = orders.map(o => {
+        if (o.id === id) {
+          return { ...o, payment_status: 'paid', status: 'preparing' };
+        }
+        return o;
+      });
+      setOrders(updated);
+      recalculateStats(updated);
+      alert('Payment verified manually! Credited to cafe wallet and order status moved to Preparing.');
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+      alert('Failed to verify payment in database.');
+    }
+  };
+
+  // 2. Menu Item Form Submission
+  const handleAddMenuItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItem.name || !newItem.price) {
+      alert('Please fill out the name and price!');
+      return;
+    }
+    const tags: string[] = [];
+    if (newItem.isVeg) tags.push('veg');
+    if (newItem.isSpicy) tags.push('spicy');
+    if (newItem.isBestseller) tags.push('bestseller');
+
+    const added = {
+      id: `m-${Date.now()}`,
+      name: newItem.name,
+      category: newItem.category,
+      price: parseFloat(newItem.price),
+      rating: 5,
+      tags,
+      description: newItem.description || 'Gourmet organic ingredients freshly made to order.'
+    };
+
+    setMenuItems([...menuItems, added]);
+    setNewItem({
+      name: '',
+      category: 'burgers',
+      price: '',
+      description: '',
+      isSpicy: false,
+      isVeg: false,
+      isBestseller: false
+    });
+    alert('Menu item added successfully!');
+  };
+
+  const handleDeleteMenuItem = (id: string) => {
+    setMenuItems(menuItems.filter(m => m.id !== id));
+  };
+
+  // 3. Inventory Action
+  const handleRestock = (id: string) => {
+    setInventory(inventory.map(i => {
+      if (i.id === id) {
+        const increment = i.unit === 'kg' ? 2 : 20;
+        return { ...i, quantity: parseFloat((i.quantity + increment).toFixed(1)) };
+      }
+      return i;
+    }));
+  };
+
+  // 4. Staff Actions
+  const handleAddStaff = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStaff.name || !newStaff.contact) return;
+    setStaff([...staff, {
+      id: `s-${Date.now()}`,
+      name: newStaff.name,
+      role: `${newStaff.role} Specialist`,
+      contact: newStaff.contact,
+      status: 'active'
+    }]);
+    setNewStaff({ name: '', role: 'Chef', contact: '' });
+  };
+
+  const handleFireStaff = (id: string) => {
+    setStaff(staff.filter(s => s.id !== id));
+  };
+
+  // 5. Gallery Actions
+  const handleAddGallery = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGalleryUrl || !newGalleryTitle) return;
+    setGallery([...gallery, {
+      id: `g-${Date.now()}`,
+      title: newGalleryTitle,
+      category: 'Signature Dishes',
+      url: newGalleryUrl
+    }]);
+    setNewGalleryUrl('');
+    setNewGalleryTitle('');
+  };
+
+  // 6. Offers Actions
+  const handleAddOffer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOfferCode || !newOfferDiscount) return;
+    setOffers([...offers, {
+      id: `o-${Date.now()}`,
+      code: newOfferCode.toUpperCase(),
+      discount: newOfferDiscount,
+      validity: 'Promo Season',
+      active: true
+    }]);
+    setNewOfferCode('');
+    setNewOfferDiscount('');
+  };
+
+  const toggleOffer = (id: string) => {
+    setOffers(offers.map(o => o.id === id ? { ...o, active: !o.active } : o));
+  };
+
+  // 7. Reviews Actions
+  const toggleReviewApproval = async (id: string, currentApproved: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .update({ approved: !currentApproved })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setReviews(reviews.map(r => r.id === id ? { ...r, approved: !r.approved } : r));
+    } catch (err) {
+      console.error('Error toggling review status:', err);
+      alert('Failed to update review status in database.');
+    }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this review from feedback stream?')) return;
+    try {
+      const { error } = await supabase
+        .from('reviews')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setReviews(reviews.filter(r => r.id !== id));
+      alert('Review permanently deleted from feedback stream.');
+    } catch (err) {
+      console.error('Error deleting review:', err);
+      alert('Failed to delete review.');
+    }
+  };
+
+  return (
+    <div className="container">
+      <div className={styles.adminPage}>
+        <div className={styles.dashboardGrid}>
+          
+          {/* Side Navigation Bar */}
+          <aside className={styles.sidebar}>
+            <div className={styles.sidebarHeader}>
+              <h2>Burger<span>Hut</span> Admin</h2>
+            </div>
+            
+            <nav className={styles.nav}>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'dashboard' ? styles.active : ''}`}
+                onClick={() => setActiveTab('dashboard')}
+              >
+                <LayoutDashboard size={18} /> Dashboard
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'orders' ? styles.active : ''}`}
+                onClick={() => setActiveTab('orders')}
+              >
+                <ShoppingCart size={18} /> Orders & Tracker
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'menu' ? styles.active : ''}`}
+                onClick={() => setActiveTab('menu')}
+              >
+                <Package size={18} /> Menu Items
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'inventory' ? styles.active : ''}`}
+                onClick={() => setActiveTab('inventory')}
+              >
+                <TrendingUp size={18} /> Ingredients Stock
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'staff' ? styles.active : ''}`}
+                onClick={() => setActiveTab('staff')}
+              >
+                <Users size={18} /> Staff Directory
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'gallery' ? styles.active : ''}`}
+                onClick={() => setActiveTab('gallery')}
+              >
+                <Image size={18} /> Cafe Gallery
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'offers' ? styles.active : ''}`}
+                onClick={() => setActiveTab('offers')}
+              >
+                <Tag size={18} /> Offers & Promos
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'reviews' ? styles.active : ''}`}
+                onClick={() => setActiveTab('reviews')}
+              >
+                <Star size={18} /> Cust Reviews
+              </div>
+              <div 
+                className={`${styles.navItem} ${activeTab === 'settings' ? styles.active : ''}`}
+                onClick={() => setActiveTab('settings')}
+              >
+                <Settings size={18} /> Cafe Settings
+              </div>
+            </nav>
+
+            <div className={styles.sidebarFooter}>
+              <a href="/" target="_blank" className={styles.viewWebsiteBtn}>
+                View Live Site
+              </a>
+            </div>
+          </aside>
+
+          {/* Main Dashboard Panel Body */}
+          <main>
+            
+            {/* Header section area */}
+            <div className={styles.headerArea}>
+              <div>
+                <h1 className="font-cormorant">
+                  Console <span>{activeTab}</span>
+                </h1>
+                <div className={styles.headerSubtitle}>
+                  Burger Hut Luxury Management System
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  alert('Refreshed data channels with postgres database!');
+                  playNotificationSound();
+                }}
+                className={styles.refreshBtn}
+              >
+                <RefreshCw size={14} /> Refresh
+              </button>
+            </div>
+
+            {/* Statistics Cards Grid Row */}
+            <div className={styles.statsRow}>
+              <div className={styles.statCard}>
+                <h4>Total Revenue</h4>
+                <div className={styles.value}>₹{stats.totalRevenue}</div>
+              </div>
+              <div className={styles.statCard}>
+                <h4>Total Orders</h4>
+                <div className={styles.value}>{stats.totalOrders}</div>
+              </div>
+              <div className={`${styles.statCard} ${stats.pendingOrders > 0 ? styles.highlight : ''}`}>
+                <h4>Pending Queue</h4>
+                <div className={styles.value}>{stats.pendingOrders}</div>
+              </div>
+            </div>
+
+            {/* Render Tab Views Dynamically */}
+
+            {/* 1. Dashboard Tab View */}
+            {activeTab === 'dashboard' && (
+              <div className="space-y-8">
+                <div className={styles.dashboardControls} style={{ gridTemplateColumns: '1fr' }}>
+                  
+                  {/* Business Action Controls Card */}
+                  <div className={styles.card}>
+                    <h3>Store <span>Live controls</span></h3>
+                    <div className={styles.controlGrid}>
+                      <div className={styles.controlItem}>
+                        <div className={styles.controlInfo}>
+                          <h5>Cafe Status</h5>
+                          <p>{controls.isOpen ? '🟢 Open & Accepting Orders' : '🔴 Closed for Prerendering'}</p>
+                        </div>
+                        <label className={styles.switch}>
+                          <input 
+                            type="checkbox" 
+                            checked={controls.isOpen}
+                            onChange={(e) => setControls({ ...controls, isOpen: e.target.checked })}
+                          />
+                          <span className={styles.slider}></span>
+                        </label>
+                      </div>
+
+                      <div className={styles.controlItem}>
+                        <div className={styles.controlInfo}>
+                          <h5>Accept Delivery</h5>
+                          <p>Enable rider dispatching</p>
+                        </div>
+                        <label className={styles.switch}>
+                          <input 
+                            type="checkbox" 
+                            checked={controls.allowDelivery}
+                            onChange={(e) => setControls({ ...controls, allowDelivery: e.target.checked })}
+                          />
+                          <span className={styles.slider}></span>
+                        </label>
+                      </div>
+
+                      <div className={styles.controlItem}>
+                        <div className={styles.controlInfo}>
+                          <h5>BOGO Promotion</h5>
+                          <p>Buy One Get One active</p>
+                        </div>
+                        <label className={styles.switch}>
+                          <input 
+                            type="checkbox" 
+                            checked={controls.surgePricing}
+                            onChange={(e) => setControls({ ...controls, surgePricing: e.target.checked })}
+                          />
+                          <span className={styles.slider}></span>
+                        </label>
+                      </div>
+
+                      <div className={styles.controlItem}>
+                        <div className={styles.controlInfo}>
+                          <h5>Free Delivery</h5>
+                          <p>For orders ₹{controls.freeDeliveryLimit}+</p>
+                        </div>
+                        <label className={styles.switch}>
+                          <input 
+                            type="checkbox" 
+                            checked={controls.freeDeliveryLimit === 0}
+                            onChange={(e) => setControls({ ...controls, freeDeliveryLimit: e.target.checked ? 0 : 1200 })}
+                          />
+                          <span className={styles.slider}></span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dashboard Orders live-manager control center */}
+                <div className={styles.card}>
+                  <h3>Active <span>Incoming Queues & Live Verification</span></h3>
+                  <div className={styles.tableWrapper}>
+                    <table className={styles.ordersTable}>
+                      <thead>
+                        <tr>
+                          <th>Order ID</th>
+                          <th>Customer Details</th>
+                          <th>Grand Total</th>
+                          <th>Payment Method</th>
+                          <th>Status Badge</th>
+                          <th>Live Action controls</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.filter(o => o.status !== 'delivered' && o.status !== 'cancelled').length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', opacity: 0.5, padding: '30px' }}>
+                              🟢 All orders verified! No active pending queues in store.
+                            </td>
+                          </tr>
+                        ) : (
+                          orders
+                            .filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+                            .slice(0, 10) // Show up to 10 active orders requiring kitchen/moderator actions
+                            .map((o) => (
+                              <tr key={o.id}>
+                                <td className="text-gold font-mono font-bold">{o.order_id}</td>
+                                <td>
+                                  <div className="font-bold text-white">{o.customer_name}</div>
+                                  <div className="text-xs text-white/50">{o.customer_phone}</div>
+                                </td>
+                                <td>
+                                  <div className="font-bold">₹{o.total_amount}</div>
+                                  <span className={`text-[8px] uppercase font-bold tracking-widest ${o.payment_status === 'paid' ? 'text-[#36B37E]' : 'text-[#FFB800]'}`}>
+                                    {o.payment_status === 'paid' ? '✓ Received' : '⌛ Pending'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={`${styles.methodBadge} ${o.payment_method?.includes('Online') ? styles.methodOnline : styles.methodCash}`}>
+                                    {o.payment_method}
+                                  </span>
+                                  {o.screenshot_url && (
+                                    <button
+                                      onClick={() => setSelectedScreenshot(o.screenshot_url)}
+                                      style={{
+                                        marginTop: '6px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '4px',
+                                        background: 'rgba(212, 164, 75, 0.1)',
+                                        border: '1px solid var(--primary)',
+                                        color: 'var(--primary)',
+                                        fontSize: '8px',
+                                        padding: '3px 6px',
+                                        cursor: 'pointer',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em'
+                                      }}
+                                    >
+                                      <Image size={9} /> View Proof
+                                    </button>
+                                  )}
+                                </td>
+                                <td>
+                                  <span className={`${styles.statusBadge} ${
+                                    o.status === 'pending' ? styles.statusPending : 
+                                    o.status === 'pending_verification' ? styles.statusPending : 
+                                    o.status === 'preparing' ? styles.statusPreparing : 
+                                    o.status === 'ready' ? styles.statusReady : 
+                                    o.status === 'delivered' ? styles.statusDelivered : styles.statusCancelled
+                                  }`}>
+                                    {o.status.replace('_', ' ')}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div className="flex gap-2 items-center">
+                                    {o.status === 'pending_verification' && (
+                                      <button 
+                                        onClick={() => handleVerifyPayment(o.id)}
+                                        className={styles.actionBtn}
+                                        style={{ padding: '6px 10px', fontSize: '9px', whiteSpace: 'nowrap' }}
+                                      >
+                                        ✓ Verify
+                                      </button>
+                                    )}
+                                    <select 
+                                      value={o.status}
+                                      onChange={(e) => handleStatusChange(o.id, e.target.value)}
+                                      className={styles.statusSelect}
+                                      style={{ padding: '4px 6px', fontSize: '10px' }}
+                                    >
+                                      <option value="pending">Pending</option>
+                                      <option value="pending_verification">Verifying</option>
+                                      <option value="preparing">Preparing</option>
+                                      <option value="ready">Ready</option>
+                                      <option value="delivered">Delivered</option>
+                                      <option value="cancelled">Cancelled</option>
+                                    </select>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 2. Orders & Tracker Tab View */}
+            {activeTab === 'orders' && (
+              <div className={styles.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+                  <h3 style={{ margin: 0 }}>Live Customer <span>Orders Stream</span></h3>
+                  <button 
+                    onClick={() => setShowWalkInModal(true)}
+                    className={styles.actionBtn}
+                    style={{ 
+                      padding: '10px 20px', 
+                      fontSize: '12px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      background: 'var(--primary)',
+                      color: 'black',
+                      fontWeight: 700,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      border: 'none',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em'
+                    }}
+                  >
+                    <Plus size={14} /> Add Walk-in Order
+                  </button>
+                </div>
+                <div className={styles.tableWrapper}>
+                  <table className={styles.ordersTable}>
+                    <thead>
+                      <tr>
+                        <th>Order ID</th>
+                        <th>Customer Details</th>
+                        <th>Items List</th>
+                        <th>Amount Details</th>
+                        <th>State Status</th>
+                        <th>Action Handles</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((o) => (
+                        <tr key={o.id}>
+                          <td className="font-mono text-gold font-bold">{o.order_id}</td>
+                          <td>
+                            <div className="font-bold">{o.customer_name}</div>
+                            <div className="text-xs opacity-50">{o.customer_phone}</div>
+                          </td>
+                          <td>
+                            <div className="text-xs space-y-1">
+                              {o.items.map((item: any, idx: number) => (
+                                <div key={idx} className="text-white/80">
+                                  {item.quantity}x <span className="text-gold font-semibold">{item.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="font-bold text-white">₹{o.total_amount}</div>
+                            <span className={`text-[9px] uppercase font-bold tracking-widest ${o.payment_status === 'paid' ? 'text-[#36B37E]' : 'text-[#FFB800]'}`}>
+                              {o.payment_status === 'paid' ? '✓ Received' : '⌛ Awaiting payment'}
+                            </span>
+                            <div>
+                              <span className={`${styles.methodBadge} ${o.payment_method?.includes('Online') ? styles.methodOnline : styles.methodCash}`}>
+                                {o.payment_method}
+                              </span>
+                            </div>
+                            {o.screenshot_url && (
+                              <button
+                                onClick={() => setSelectedScreenshot(o.screenshot_url)}
+                                style={{
+                                  marginTop: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '4px',
+                                  background: 'rgba(212, 164, 75, 0.1)',
+                                  border: '1px solid var(--primary)',
+                                  color: 'var(--primary)',
+                                  fontSize: '9px',
+                                  padding: '4px 6px',
+                                  cursor: 'pointer',
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em'
+                                }}
+                              >
+                                <Image size={10} /> View Proof
+                              </button>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`${styles.statusBadge} ${
+                              o.status === 'pending' ? styles.statusPending : 
+                              o.status === 'pending_verification' ? styles.statusPending : 
+                              o.status === 'preparing' ? styles.statusPreparing : 
+                              o.status === 'ready' ? styles.statusReady : 
+                              o.status === 'delivered' ? styles.statusDelivered : styles.statusCancelled
+                            }`}>
+                              {o.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="flex gap-2 items-center">
+                              {o.status === 'pending_verification' && (
+                                <button 
+                                  onClick={() => handleVerifyPayment(o.id)}
+                                  className={styles.actionBtn}
+                                >
+                                  Verify Payment
+                                </button>
+                              )}
+                              <select 
+                                value={o.status}
+                                onChange={(e) => handleStatusChange(o.id, e.target.value)}
+                                className={styles.statusSelect}
+                              >
+                                <option value="pending">Pending</option>
+                                <option value="pending_verification">Verifying</option>
+                                <option value="preparing">Preparing</option>
+                                <option value="ready">Ready</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 3. Menu Items Tab View */}
+            {activeTab === 'menu' && (
+              <div className="grid grid-cols-3 gap-6">
+                
+                {/* Catalog List Table */}
+                <div className={`${styles.card} col-span-2`}>
+                  <h3>Gourmet <span>Menu Catalog</span></h3>
+                  <div className={styles.tableWrapper}>
+                    <table className={styles.ordersTable}>
+                      <thead>
+                        <tr>
+                          <th>Item Name</th>
+                          <th>Category</th>
+                          <th>Price</th>
+                          <th>Description</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {menuItems.map((m) => (
+                          <tr key={m.id}>
+                            <td>
+                              <div className="font-bold text-white">{m.name}</div>
+                              <div className="flex gap-1 mt-1">
+                                {m.tags.map((tag: string) => (
+                                  <span key={tag} className="text-[8px] bg-gold/10 text-gold border border-gold/20 px-1.5 py-0.5 rounded font-bold uppercase">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="text-xs uppercase text-gold/80 font-bold">{m.category}</td>
+                            <td className="font-black text-gold">₹{m.price}</td>
+                            <td className="text-xs opacity-60 max-w-[200px] truncate">{m.description}</td>
+                            <td>
+                              <button 
+                                onClick={() => handleDeleteMenuItem(m.id)}
+                                className={styles.deleteBtn}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Add New Burger Form */}
+                <div className={styles.card}>
+                  <h3>Add <span>Gourmet Item</span></h3>
+                  <form onSubmit={handleAddMenuItem}>
+                    <div className={styles.formGroup}>
+                      <label>Item Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Vintage Truffle Double" 
+                        value={newItem.name}
+                        onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.formRow + " mt-4"}>
+                      <div className={styles.formGroup}>
+                        <label>Category</label>
+                        <select 
+                          value={newItem.category}
+                          onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
+                        >
+                          <option value="burgers">Burgers</option>
+                          <option value="sides">Sides</option>
+                          <option value="drinks">Drinks</option>
+                        </select>
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label>Price (INR)</label>
+                        <input 
+                          type="number" 
+                          placeholder="e.g. 750" 
+                          value={newItem.price}
+                          onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Description</label>
+                      <textarea 
+                        rows={3} 
+                        placeholder="Opulent smoke flavor details..." 
+                        value={newItem.description}
+                        onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
+                      />
+                    </div>
+
+                    <div className={styles.checkboxGroup}>
+                      <label className={styles.checkboxLabel}>
+                        <input 
+                          type="checkbox" 
+                          checked={newItem.isVeg}
+                          onChange={(e) => setNewItem({ ...newItem, isVeg: e.target.checked })}
+                        />
+                        Vegetarian
+                      </label>
+                      <label className={styles.checkboxLabel}>
+                        <input 
+                          type="checkbox" 
+                          checked={newItem.isSpicy}
+                          onChange={(e) => setNewItem({ ...newItem, isSpicy: e.target.checked })}
+                        />
+                        Spicy
+                      </label>
+                      <label className={styles.checkboxLabel}>
+                        <input 
+                          type="checkbox" 
+                          checked={newItem.isBestseller}
+                          onChange={(e) => setNewItem({ ...newItem, isBestseller: e.target.checked })}
+                        />
+                        Best Seller
+                      </label>
+                    </div>
+
+                    <button type="submit" className={styles.submitBtn}>
+                      <Plus size={16} /> Add To Catalog
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* 4. Product Ingredients Tab View */}
+            {activeTab === 'inventory' && (
+              <div className={styles.card}>
+                <h3>Ingredients <span>Stock Level Tracker</span></h3>
+                <div className={styles.inventoryGrid + " mt-6"}>
+                  {inventory.map((i) => {
+                    const ratio = Math.min((i.quantity / i.minRequired) * 50, 100);
+                    const isLow = i.quantity <= i.minRequired;
+                    const isOut = i.quantity <= 0;
+
+                    return (
+                      <div key={i.id} className={styles.inventoryCard}>
+                        <div className={styles.inventoryHeader}>
+                          <h4>{i.name}</h4>
+                          <span className={`${styles.stockBadge} ${
+                            isOut ? styles.stockOut : isLow ? styles.stockLowStock : styles.stockInStock
+                          }`}>
+                            {isOut ? 'Out of Stock' : isLow ? 'Low Stock Warning' : 'In Stock'}
+                          </span>
+                        </div>
+
+                        <div className={styles.progressWrapper}>
+                          <div className={styles.progressBarTrack}>
+                            <div 
+                              className={`${styles.progressBarFill} ${
+                                isOut ? styles.progressOut : isLow ? styles.progressLowStock : styles.progressInStock
+                              }`}
+                              style={{ width: `${ratio}%` }}
+                            ></div>
+                          </div>
+
+                          <div className={styles.progressText}>
+                            <span>Current: {i.quantity} {i.unit}</span>
+                            <span>Min Req: {i.minRequired} {i.unit}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-2">
+                          <span className="text-xs text-white/50">Restock replenishments trigger in +20/2kg packages</span>
+                          <button 
+                            onClick={() => handleRestock(i.id)}
+                            className={styles.actionBtn}
+                          >
+                            + Restock
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 5. Staff Directory Tab View */}
+            {activeTab === 'staff' && (
+              <div className="grid grid-cols-3 gap-6">
+                
+                {/* Roster display */}
+                <div className={`${styles.card} col-span-2`}>
+                  <h3>Active <span>Personnel Roster</span></h3>
+                  <div className={styles.staffGrid + " mt-4"}>
+                    {staff.map((s) => (
+                      <div key={s.id} className={styles.staffCard}>
+                        <div className={styles.staffAvatar}>
+                          {s.name.replace('Chef ', '').slice(0, 2).toUpperCase()}
+                        </div>
+                        <h4>{s.name}</h4>
+                        <div className={styles.staffRole}>{s.role}</div>
+                        <div className={styles.staffInfo}>
+                          ☎ {s.contact}
+                        </div>
+
+                        <span className={`${styles.staffStatusBadge} ${
+                          s.status === 'active' ? styles.staffActive : 
+                          s.status === 'on_break' ? styles.staffOnBreak : styles.staffOffline
+                        }`}>
+                          {s.status.replace('_', ' ')}
+                        </span>
+
+                        <button 
+                          onClick={() => handleFireStaff(s.id)}
+                          className={styles.deleteBtn}
+                          style={{ top: '20px', left: '20px', right: 'auto' }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Hire Staff Form */}
+                <div className={styles.card}>
+                  <h3>Hire <span>New Team Member</span></h3>
+                  <form onSubmit={handleAddStaff}>
+                    <div className={styles.formGroup}>
+                      <label>Full Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Varun Dhawan" 
+                        value={newStaff.name}
+                        onChange={(e) => setNewStaff({ ...newStaff, name: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Team Role</label>
+                      <select 
+                        value={newStaff.role}
+                        onChange={(e) => setNewStaff({ ...newStaff, role: e.target.value })}
+                      >
+                        <option value="Chef">Gourmet Chef</option>
+                        <option value="Pastry Cook">Pastry Baker</option>
+                        <option value="Delivery Rider">Rider Courier</option>
+                        <option value="Cashier Counter">Cashier Operator</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Contact Number</label>
+                      <input 
+                        type="tel" 
+                        placeholder="e.g. +91 99999 00000" 
+                        value={newStaff.contact}
+                        onChange={(e) => setNewStaff({ ...newStaff, contact: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <button type="submit" className={styles.submitBtn}>
+                      <Plus size={16} /> Hire Professional
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* 6. Gallery Management Tab View */}
+            {activeTab === 'gallery' && (
+              <div className="grid grid-cols-3 gap-6">
+                
+                {/* Images grid */}
+                <div className={`${styles.card} col-span-2`}>
+                  <h3>Homepage <span>Media Showcase</span></h3>
+                  <div className={styles.galleryGrid + " mt-4"}>
+                    {gallery.map((g) => (
+                      <div key={g.id} className={styles.galleryCard}>
+                        <img src={g.url} alt={g.title} className={styles.galleryImage} />
+                        <div className={styles.galleryInfo}>
+                          <h4>{g.title}</h4>
+                          <span className={styles.galleryTag}>{g.category}</span>
+                        </div>
+                        <button 
+                          onClick={() => setGallery(gallery.filter(item => item.id !== g.id))}
+                          className={styles.deleteBtn}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Upload mock form */}
+                <div className={styles.card}>
+                  <h3>Upload <span>Gourmet Media</span></h3>
+                  <form onSubmit={handleAddGallery}>
+                    <div className={styles.formGroup}>
+                      <label>Media Title</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Firehouse Grill Kitchen" 
+                        value={newGalleryTitle}
+                        onChange={(e) => setNewGalleryTitle(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Image Unsplash URL</label>
+                      <input 
+                        type="url" 
+                        placeholder="https://images.unsplash.com/..." 
+                        value={newGalleryUrl}
+                        onChange={(e) => setNewGalleryUrl(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <button type="submit" className={styles.submitBtn}>
+                      <Plus size={16} /> Add Image To Site
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* 7. Offers & Promotions Tab View */}
+            {activeTab === 'offers' && (
+              <div className="grid grid-cols-3 gap-6">
+                
+                {/* Coupon Cards */}
+                <div className={`${styles.card} col-span-2`}>
+                  <h3>Promotional <span>Coupons Manager</span></h3>
+                  <div className={styles.couponGrid + " mt-4"}>
+                    {offers.map((o) => (
+                      <div key={o.id} className={styles.couponCard}>
+                        <div className={styles.couponCode}>{o.code}</div>
+                        <h4>{o.discount}</h4>
+                        <p>{o.validity}</p>
+
+                        <div className={styles.couponToggle}>
+                          <label className={styles.switch}>
+                            <input 
+                              type="checkbox" 
+                              checked={o.active}
+                              onChange={() => toggleOffer(o.id)}
+                            />
+                            <span className={styles.slider}></span>
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Create Promo Code form */}
+                <div className={styles.card}>
+                  <h3>Create <span>Coupon Code</span></h3>
+                  <form onSubmit={handleAddOffer}>
+                    <div className={styles.formGroup}>
+                      <label>Coupon Code Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. BOGOFREE" 
+                        value={newOfferCode}
+                        onChange={(e) => setNewOfferCode(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Discount Details</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. ₹200 OFF on orders above ₹1000" 
+                        value={newOfferDiscount}
+                        onChange={(e) => setNewOfferDiscount(e.target.value)}
+                        required
+                      />
+                    </div>
+
+                    <button type="submit" className={styles.submitBtn}>
+                      <Plus size={16} /> Deploy Promo Code
+                    </button>
+                  </form>
+                </div>
+              </div>
+            )}
+
+            {/* 8. Customer Reviews Moderation Tab View */}
+            {activeTab === 'reviews' && (
+              <div className={styles.card}>
+                <h3>Client <span>Feedback Moderation</span></h3>
+                <div className={styles.tableWrapper + " mt-4"}>
+                  <table className={styles.ordersTable}>
+                    <thead>
+                      <tr>
+                        <th>Customer Name</th>
+                        <th>Rating Stars</th>
+                        <th>Review Text Content</th>
+                        <th>Attached Media</th>
+                        <th>Show on Homepage?</th>
+                        <th>Discard Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reviews.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', opacity: 0.5, padding: '30px' }}>
+                            ⌛ No customer reviews found in database.
+                          </td>
+                        </tr>
+                      ) : (
+                        reviews.map((r) => (
+                          <tr key={r.id}>
+                            <td className="font-bold text-white">{r.name}</td>
+                            <td>
+                              <div className={styles.ratingWrapper}>
+                                {[...Array(5)].map((_, i) => (
+                                  <Star 
+                                    key={i} 
+                                    size={12} 
+                                    className={i < Math.floor(r.rating) ? styles.starGold : styles.starGray} 
+                                  />
+                                ))}
+                              </div>
+                            </td>
+                            <td className={styles.reviewText} style={{ maxWidth: '280px', whiteSpace: 'normal', wordBreak: 'break-word' }}>
+                              "{r.text}"
+                            </td>
+                            <td>
+                              {r.media_url ? (
+                                r.media_type === 'video' ? (
+                                  <video 
+                                    src={r.media_url} 
+                                    controls 
+                                    style={{
+                                      width: '110px',
+                                      height: '65px',
+                                      borderRadius: '8px',
+                                      border: '1px solid rgba(212, 164, 75, 0.25)',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                ) : (
+                                  <img 
+                                    src={r.media_url} 
+                                    alt="Review attached media" 
+                                    style={{
+                                      width: '110px',
+                                      height: '65px',
+                                      borderRadius: '8px',
+                                      border: '1px solid rgba(212, 164, 75, 0.25)',
+                                      objectFit: 'cover',
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={() => window.open(r.media_url, '_blank')}
+                                  />
+                                )
+                              ) : (
+                                <span style={{ fontSize: '9px', opacity: 0.3, textTransform: 'uppercase', letterSpacing: '0.05em' }}>No Media</span>
+                              )}
+                            </td>
+                            <td>
+                              <div className="flex items-center gap-3">
+                                <label className={styles.switch}>
+                                  <input 
+                                    type="checkbox" 
+                                    checked={r.approved}
+                                    onChange={() => toggleReviewApproval(r.id, r.approved)}
+                                  />
+                                  <span className={styles.slider}></span>
+                                </label>
+                                <span className="text-xs font-bold uppercase tracking-wider text-white/50">
+                                  {r.approved ? '✓ Published' : '⌛ Disabled'}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <button 
+                                onClick={() => handleDeleteReview(r.id)}
+                                className={styles.deleteBtn}
+                                style={{ position: 'relative', top: 'auto', right: 'auto', display: 'inline-flex' }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 9. Settings Tab View */}
+            {activeTab === 'settings' && (
+              <div className="grid grid-cols-2 gap-6">
+                <div className={styles.card}>
+                  <h3>Cafe Parameter <span>Configuration</span></h3>
+                  <div className="space-y-4">
+                    <div className={styles.formGroup}>
+                      <label>Cafe Branding Title</label>
+                      <input type="text" defaultValue="The Burger Hut Vintage Gourmet" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Customer Support Helpline</label>
+                      <input type="tel" defaultValue="+91 1800 240 5000" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Store Location Address</label>
+                      <input type="text" defaultValue="Sector 15, Vintage Luxury Road, Gurgaon" />
+                    </div>
+                    <button 
+                      onClick={() => alert('Branding settings saved successfully!')} 
+                      className={styles.submitBtn}
+                    >
+                      Save Configurations
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.card}>
+                  <h3>Delivery & <span>Financial Rules</span></h3>
+                  <div className="space-y-4">
+                    <div className={styles.formGroup}>
+                      <label>Standard Delivery Fee (INR)</label>
+                      <input type="number" defaultValue="150" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Minimum Cart value for Checkout</label>
+                      <input type="number" defaultValue="450" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Razorpay Merchant Account API Mode</label>
+                      <select defaultValue="test">
+                        <option value="test">Razorpay Test Gateway Sandbox</option>
+                        <option value="live">Razorpay Live Production Gateway</option>
+                      </select>
+                    </div>
+                    <button 
+                      onClick={() => alert('Delivery and payment configurations synchronized!')} 
+                      className={styles.submitBtn}
+                    >
+                      Save Financial Parameters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </main>
+        </div>
+      </div>
+
+      {/* Real-time Order Popup Alert Toast Notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div 
+            initial={{ y: 50, opacity: 0, scale: 0.9 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: 50, opacity: 0, scale: 0.9 }}
+            className={styles.toastNotification}
+          >
+            <div className={styles.toastHeader}>
+              <div className={styles.toastAlertTitle}>
+                <span></span>
+                {toast.title}
+              </div>
+              <div 
+                className={styles.toastCloseBtn}
+                onClick={() => setToast(null)}
+              >
+                <X size={14} />
+              </div>
+            </div>
+            
+            <div className={styles.toastBody}>
+              <div className={styles.toastIconWrapper}>
+                <Bell size={20} className="text-gold" />
+              </div>
+              <div className={styles.toastContent}>
+                <h4>Gourmet Order Incoming!</h4>
+                <p>{toast.body}</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Deluxe Screenshot Verification Modal */}
+      {selectedScreenshot && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0, 0, 0, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(10px)',
+          padding: '20px'
+        }}>
+          <div style={{
+            maxWidth: '500px',
+            width: '100%',
+            background: '#120d0b',
+            border: '1px solid #D4A44B',
+            padding: '30px',
+            position: 'relative',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.9)',
+            borderRadius: '0px'
+          }}>
+            <button 
+              onClick={() => setSelectedScreenshot(null)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: 'none',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                opacity: 0.7
+              }}
+            >
+              <X size={20} />
+            </button>
+            
+            <h3 style={{ 
+              fontFamily: 'var(--font-cormorant)', 
+              fontSize: '1.8rem', 
+              color: '#D4A44B', 
+              marginBottom: '20px', 
+              textAlign: 'center',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase'
+            }}>
+              Payment Proof Receipt
+            </h3>
+            
+            <div style={{
+              width: '100%',
+              height: '350px',
+              border: '1px solid rgba(212, 164, 75, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justify: 'center',
+              overflow: 'hidden',
+              marginBottom: '25px',
+              background: 'rgba(0, 0, 0, 0.4)'
+            }}>
+              <img 
+                src={selectedScreenshot} 
+                alt="Payment proof screenshot" 
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '15px' }}>
+              <button 
+                onClick={() => {
+                  const orderToVerify = orders.find(o => o.screenshot_url === selectedScreenshot);
+                  if (orderToVerify) {
+                    handleVerifyPayment(orderToVerify.id);
+                  }
+                  setSelectedScreenshot(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  background: '#D4A44B',
+                  color: 'black',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  fontSize: '0.8rem',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                Approve Payment & Confirm Order
+              </button>
+              <button 
+                onClick={() => setSelectedScreenshot(null)}
+                style={{
+                  padding: '12px 20px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'white',
+                  background: 'transparent',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Place Walk-in Order Modal */}
+      {showWalkInModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(20px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          overflowY: 'auto'
+        }}>
+          <div style={{
+            background: 'rgba(18, 13, 11, 0.95)',
+            border: '1px solid var(--primary)',
+            borderRadius: '28px',
+            padding: '35px',
+            width: '100%',
+            maxWidth: '900px',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.9)',
+            position: 'relative'
+          }}>
+            {/* Vintage corners decoration */}
+            <div style={{ position: 'absolute', top: '15px', left: '15px', width: '15px', height: '15px', borderTop: '2px solid var(--primary)', borderLeft: '2px solid var(--primary)' }} />
+            <div style={{ position: 'absolute', top: '15px', right: '15px', width: '15px', height: '15px', borderTop: '2px solid var(--primary)', borderRight: '2px solid var(--primary)' }} />
+            <div style={{ position: 'absolute', bottom: '15px', left: '15px', width: '15px', height: '15px', borderBottom: '2px solid var(--primary)', borderLeft: '2px solid var(--primary)' }} />
+            <div style={{ position: 'absolute', bottom: '15px', right: '15px', width: '15px', height: '15px', borderBottom: '2px solid var(--primary)', borderRight: '2px solid var(--primary)' }} />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '1px solid rgba(212, 164, 75, 0.15)', paddingBottom: '15px' }}>
+              <h3 style={{ margin: 0, fontFamily: 'var(--font-cormorant)', fontSize: '2rem', color: 'white' }}>
+                Add <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>Walk-in Order</span>
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowWalkInModal(false);
+                  setWalkInCart([]);
+                }}
+                style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.6 }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
+              
+              {/* Left Column: Customer & Payment Details */}
+              <div className="space-y-4">
+                <h4 style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.2rem', color: 'var(--primary)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                  Customer Details
+                </h4>
+
+                <div className={styles.formGroup}>
+                  <label>Guest Name</label>
+                  <input 
+                    type="text"
+                    value={walkInCustomer.name}
+                    onChange={(e) => setWalkInCustomer({ ...walkInCustomer, name: e.target.value })}
+                    placeholder="e.g. Walk-in Guest"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                    required
+                  />
+                </div>
+
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label>Phone Number (Optional)</label>
+                  <input 
+                    type="tel"
+                    value={walkInCustomer.phone}
+                    onChange={(e) => setWalkInCustomer({ ...walkInCustomer, phone: e.target.value })}
+                    placeholder="e.g. 9876543210"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                  />
+                </div>
+
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label>Table / Destination Details</label>
+                  <input 
+                    type="text"
+                    value={walkInCustomer.address}
+                    onChange={(e) => setWalkInCustomer({ ...walkInCustomer, address: e.target.value })}
+                    placeholder="e.g. Dine-In Table 3 or Takeaway"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                    required
+                  />
+                </div>
+
+                <h4 style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.2rem', color: 'var(--primary)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px', marginTop: '20px' }}>
+                  Billing & Status
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '12px' }}>
+                  <div className={styles.formGroup}>
+                    <label>Payment Method</label>
+                    <select
+                      value={walkInCustomer.paymentMethod}
+                      onChange={(e) => setWalkInCustomer({ ...walkInCustomer, paymentMethod: e.target.value })}
+                      style={{ background: '#1C1512', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                    >
+                      <option value="Cash">💵 Cash Counter</option>
+                      <option value="Online UPI">📱 Online UPI</option>
+                    </select>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Payment Status</label>
+                    <select
+                      value={walkInCustomer.paymentStatus}
+                      onChange={(e) => setWalkInCustomer({ ...walkInCustomer, paymentStatus: e.target.value })}
+                      style={{ background: '#1C1512', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                    >
+                      <option value="paid">✓ Paid</option>
+                      <option value="pending">⌛ Pending</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className={styles.formGroup} style={{ marginTop: '12px' }}>
+                  <label>Initial Kitchen Status</label>
+                  <select
+                    value={walkInCustomer.status}
+                    onChange={(e) => setWalkInCustomer({ ...walkInCustomer, status: e.target.value })}
+                    style={{ background: '#1C1512', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                  >
+                    <option value="preparing">🍳 Preparing (Default)</option>
+                    <option value="pending">⌛ Pending Kitchen Queue</option>
+                    <option value="ready">🔔 Ready for Service</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Right Column: Menu Cart Builder */}
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <h4 style={{ fontFamily: 'var(--font-cormorant)', fontSize: '1.2rem', color: 'var(--primary)', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px', marginBottom: '15px' }}>
+                  Build Orders Basket
+                </h4>
+
+                {/* Add Item form strip */}
+                <div style={{ background: 'rgba(212, 164, 75, 0.05)', border: '1px solid rgba(212, 164, 75, 0.15)', borderRadius: '12px', padding: '15px', marginBottom: '15px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <div>
+                      <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '4px' }}>Category</label>
+                      <select 
+                        value={selectedCategory} 
+                        onChange={(e) => {
+                          setSelectedCategory(e.target.value);
+                          setSelectedMenuItemId('');
+                        }}
+                        style={{ background: '#1C1512', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '6px', borderRadius: '6px', width: '100%', fontSize: '12px' }}
+                      >
+                        <option value="All">All Categories</option>
+                        {Array.from(new Set(menuData.map(m => m.category))).map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '4px' }}>Select Dish</label>
+                      <select 
+                        value={selectedMenuItemId}
+                        onChange={(e) => setSelectedMenuItemId(e.target.value)}
+                        style={{ background: '#1C1512', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '6px', borderRadius: '6px', width: '100%', fontSize: '12px' }}
+                      >
+                        <option value="">-- Choose Item --</option>
+                        {menuData
+                          .filter(m => selectedCategory === 'All' || m.category === selectedCategory)
+                          .map(m => (
+                            <option key={m.id} value={m.id}>{m.name} - ₹{m.price}</option>
+                          ))
+                        }
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '10px' }}>
+                    <div style={{ width: '80px' }}>
+                      <label style={{ fontSize: '9px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '3px' }}>Qty</label>
+                      <input 
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={selectedItemQty}
+                        onChange={(e) => setSelectedItemQty(parseInt(e.target.value) || 1)}
+                        style={{ background: '#1C1512', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '6px', borderRadius: '6px', width: '100%', textAlign: 'center', fontSize: '12px' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddWalkInCart}
+                      disabled={!selectedMenuItemId}
+                      style={{
+                        flex: 1,
+                        background: selectedMenuItemId ? 'rgba(212, 164, 75, 0.2)' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--primary)',
+                        color: 'var(--primary)',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        cursor: selectedMenuItemId ? 'pointer' : 'not-allowed',
+                        textTransform: 'uppercase',
+                        marginTop: '12px'
+                      }}
+                    >
+                      + Add To Basket
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cart Items list */}
+                <div style={{ 
+                  flex: 1, 
+                  background: 'rgba(0, 0, 0, 0.3)', 
+                  border: '1px solid rgba(255,255,255,0.05)', 
+                  borderRadius: '12px', 
+                  padding: '15px', 
+                  maxHeight: '180px', 
+                  overflowY: 'auto',
+                  marginBottom: '20px'
+                }}>
+                  {walkInCart.length === 0 ? (
+                    <div style={{ textAlign: 'center', opacity: 0.4, fontSize: '12px', paddingTop: '40px' }}>
+                      🛒 Orders Basket is currently empty.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {walkInCart.map((item) => (
+                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px', marginTop: '6px' }}>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{item.name}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--primary)' }}>
+                              ₹{item.price} x {item.quantity}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 700 }}>₹{item.price * item.quantity}</div>
+                            <button
+                              type="button"
+                              onClick={() => setWalkInCart(walkInCart.filter(c => c.id !== item.id))}
+                              style={{ background: 'transparent', border: 'none', color: '#FF3B30', cursor: 'pointer' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Basket summary and action */}
+                <div style={{ borderTop: '1px solid rgba(212, 164, 75, 0.15)', paddingTop: '15px', marginTop: 'auto' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '0.05em' }}>GRAND TOTAL:</span>
+                    <span style={{ fontSize: '24px', fontFamily: 'var(--font-cormorant)', color: 'var(--primary)', fontWeight: 900 }}>
+                      ₹{walkInCart.reduce((sum, item) => sum + (item.price * item.quantity), 0)}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '15px' }}>
+                    <button
+                      type="button"
+                      onClick={handlePlaceWalkInOrder}
+                      disabled={walkInCart.length === 0}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        background: walkInCart.length > 0 ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                        color: 'black',
+                        fontWeight: 900,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        fontSize: '0.85rem',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: walkInCart.length > 0 ? 'pointer' : 'not-allowed',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      ⚡ Save Walk-in Order
+                    </button>
+                    
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowWalkInModal(false);
+                        setWalkInCart([]);
+                      }}
+                      style={{
+                        padding: '12px 20px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        color: 'white',
+                        background: 'transparent',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        fontSize: '0.85rem',
+                        borderRadius: '8px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

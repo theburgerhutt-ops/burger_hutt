@@ -1,0 +1,102 @@
+.offersSection {
+  padding: 140px 0 40px 0;
+  position: relative;
+  z-index: 10;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.subTitle {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.4em;
+  color: var(--primary);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: 3.5rem;
+  font-family: var(--font-cormorant);
+  line-height: 1;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+}
+
+.mainOfferCard, .secondaryOfferCard {
+  position: relative;
+  background: rgba(18, 13, 11, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  padding: 40px;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  overflow: hidden;
+}
+
+.offerBadge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: var(--primary);
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 4px;
+}
+
+.iconBox {
+  flex-shrink: 0;
+}
+
+.offerContent h3 {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 5px;
+}
+
+.offerContent h4 {
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.offerContent p {
+  font-size: 1.2rem;
+  opacity: 0.8;
+  font-family: var(--font-cormorant);
+}
+
+.terms {
+  font-size: 0.65rem;
+  opacity: 0.5;
+  margin-top: 10px;
+  letter-spacing: 0.1em;
+}
+
+.cardGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 70% 50%, rgba(212, 164, 75, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.secondaryOfferCard {
+  padding: 30px;
+  gap: 20px;
+}
+
+@media (max-width: 992px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

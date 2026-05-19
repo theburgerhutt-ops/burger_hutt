@@ -1,0 +1,125 @@
+.mapSection {
+  padding: 100px 0;
+  background: transparent;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 50px;
+  align-items: stretch;
+}
+
+.infoCard {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(212, 164, 75, 0.15);
+  border-radius: 30px;
+  padding: 50px 40px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+}
+
+.title {
+  font-family: var(--font-cormorant);
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 40px;
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.infoItem {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.iconBox {
+  width: 45px;
+  height: 45px;
+  background: rgba(212, 164, 75, 0.1);
+  border: 1px solid rgba(212, 164, 75, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.infoItem h4 {
+  color: var(--primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 5px;
+}
+
+.infoItem p {
+  color: #fff;
+  opacity: 0.7;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.directionBtn {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: var(--primary);
+  color: #000;
+  border: none;
+  padding: 16px;
+  border-radius: 100px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(212, 164, 75, 0.3);
+}
+
+.mapContainer {
+  position: relative;
+  border-radius: 30px;
+  overflow: hidden;
+  border: 1px solid rgba(212, 164, 75, 0.2);
+  min-height: 500px;
+  box-shadow: 0 30px 100px rgba(0,0,0,0.6);
+}
+
+.iframe {
+  filter: invert(90%) hue-rotate(180deg) brightness(0.6) contrast(1.2) saturate(0.5);
+  mix-blend-mode: luminosity;
+}
+
+.mapOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to right, rgba(18, 13, 11, 0.4), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .infoCard {
+    padding: 40px 30px;
+  }
+}

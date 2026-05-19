@@ -1,0 +1,134 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  padding: 30px 0;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  display: flex;
+  align-items: center;
+}
+
+.header.scrolled {
+  padding: 15px 0;
+  background: rgba(18, 13, 11, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(212, 164, 75, 0.15);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.headerContainer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.logo {
+  font-family: var(--font-cormorant);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  color: var(--primary);
+  letter-spacing: 0.2em;
+}
+
+.nav {
+  display: flex;
+  gap: 40px;
+}
+
+.nav a {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--foreground);
+}
+
+.nav a:hover {
+  color: var(--primary);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.actionBtn {
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.actionBtn:hover {
+  color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.cartBtn {
+  position: relative;
+}
+
+.cartCount {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: var(--primary);
+  color: #000;
+  font-size: 0.7rem;
+  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobileMenu {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .nav {
+    gap: 20px;
+  }
+  .logo {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav {
+    display: none;
+  }
+
+  .mobileMenu {
+    display: block;
+  }
+
+  .header {
+    height: 70px;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    letter-spacing: 0.1em;
+  }
+
+  .headerContainer {
+    padding: 0 20px;
+  }
+}

@@ -1,0 +1,142 @@
+.contactSection {
+  padding: 100px 0;
+  background: var(--background);
+  position: relative;
+  overflow: hidden;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.socialCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 60px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.socialCard::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border: 1px solid rgba(212, 164, 75, 0.1);
+  pointer-events: none;
+}
+
+.instaIcon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(220, 39, 67, 0.3);
+}
+
+.title {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  font-family: var(--font-cormorant);
+}
+
+.subtitle {
+  color: var(--text-muted);
+  margin-bottom: 40px;
+  font-style: italic;
+  font-family: var(--font-cormorant);
+  font-size: 1.2rem;
+}
+
+.instaBtn {
+  background: var(--primary);
+  color: black;
+  padding: 15px 40px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.instaBtn:hover {
+  background: white;
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(212, 164, 75, 0.4);
+}
+
+.contactInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.infoItem {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 25px;
+  background: rgba(212, 164, 75, 0.03);
+  border: 1px solid rgba(212, 164, 75, 0.1);
+  transition: all 0.3s ease;
+}
+
+.infoItem:hover {
+  background: rgba(212, 164, 75, 0.08);
+  border-color: var(--primary);
+  transform: translateX(10px);
+}
+
+.iconBox {
+  width: 50px;
+  height: 50px;
+  border: 1px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+}
+
+.infoText h4 {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+  color: var(--primary);
+}
+
+.infoText p {
+  font-size: 1.1rem;
+  color: var(--foreground);
+  opacity: 0.9;
+}
+
+@media (max-width: 992px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .socialCard {
+    padding: 40px 20px;
+  }
+  .title {
+    font-size: 2rem;
+  }
+}

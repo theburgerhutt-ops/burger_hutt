@@ -1,0 +1,224 @@
+.reviewsSection {
+  padding: 100px 0;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 80px;
+}
+
+.title {
+  font-family: var(--font-cormorant);
+  font-size: 4rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.reviewsContainer {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 30px;
+  padding: 40px 0 80px 0;
+  scrollbar-width: none; /* Hide scrollbar Firefox */
+  -ms-overflow-style: none; /* Hide scrollbar IE/Edge */
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+}
+
+.reviewsContainer::-webkit-scrollbar {
+  display: none; /* Hide scrollbar Chrome/Safari */
+}
+
+.reviewCard {
+  position: relative;
+  width: 350px;
+  flex-shrink: 0;
+  scroll-snap-align: center;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(30px);
+  border: 1px solid rgba(212, 164, 75, 0.1);
+  border-radius: 24px;
+  padding: 40px 30px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+  transition: border-color 0.4s ease;
+}
+
+.reviewCard:hover {
+  border-color: rgba(212, 164, 75, 0.4);
+}
+
+.cardGlow {
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(212, 164, 75, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.quoteIcon {
+  color: var(--primary);
+  opacity: 0.2;
+  position: absolute;
+  top: 30px;
+  right: 30px;
+}
+
+.stars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+
+.content {
+  font-family: var(--font-cormorant);
+  font-size: 1.2rem;
+  font-style: italic;
+  color: #fff;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  opacity: 0.9;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 20px;
+}
+
+.avatar {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, var(--primary), #D4A44B);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #000;
+  font-weight: 800;
+  font-size: 1.1rem;
+  box-shadow: 0 5px 15px rgba(212, 164, 75, 0.3);
+}
+
+.name {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.role {
+  font-size: 0.75rem;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .title {
+    font-size: 2.5rem;
+  }
+  
+  .reviewCard {
+    width: 100%;
+    max-width: 350px;
+  }
+}
+
+.videoPreview {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  border: 1px solid rgba(212, 164, 75, 0.2);
+  cursor: pointer;
+}
+
+.videoThumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.videoPreview:hover .videoThumbnail {
+  transform: scale(1.1);
+}
+
+.playOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+
+.videoPreview:hover .playOverlay {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.playIcon {
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  padding: 15px;
+  border-radius: 50%;
+  border: 1px solid var(--primary);
+}
+
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modalContent {
+  position: relative;
+  width: 100%;
+  max-width: 500px; /* Vertical video style */
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border: 1px solid var(--primary);
+}
+
+.videoPlayer {
+  width: 100%;
+  height: 100%;
+}
+
+.closeModal {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  color: #fff;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  letter-spacing: 0.2em;
+}
