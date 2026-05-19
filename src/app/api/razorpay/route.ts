@@ -1,4 +1,4 @@
-import { razorpay } from '@/lib/razorpay';
+import { getRazorpay } from '@/lib/razorpay';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       receipt: "receipt_" + Math.random().toString(36).substring(7),
     };
 
+    const razorpay = getRazorpay();
     const order = await razorpay.orders.create(options);
     return NextResponse.json(order);
   } catch (error) {
@@ -18,3 +19,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
   }
 }
+
