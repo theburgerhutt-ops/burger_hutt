@@ -69,6 +69,18 @@ export default function AdminDashboard() {
     { id: 'i-5', name: 'Aged Cheddar Slices', quantity: 95, minRequired: 35, unit: 'pcs' }
   ]);
 
+  // 3b. Ingredients Stock Purchase Logs States
+  const [purchaseLogs, setPurchaseLogs] = useState<any[]>([]);
+  const [newPurchase, setNewPurchase] = useState({
+    name: '',
+    customName: '',
+    quantity: '',
+    unit: 'pcs',
+    totalCost: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+
+
   // 4. Staff List State (initialized clean)
   const [staff, setStaff] = useState<any[]>([]);
 
@@ -263,6 +275,25 @@ export default function AdminDashboard() {
     fetchOrders();
     fetchReviews();
 
+    // Load inventory and purchase logs from localStorage
+    const savedInventory = localStorage.getItem('tbh_inventory');
+    const savedLogs = localStorage.getItem('tbh_purchase_logs');
+    if (savedInventory) {
+      setInventory(JSON.parse(savedInventory));
+    }
+    if (savedLogs) {
+      setPurchaseLogs(JSON.parse(savedLogs));
+    } else {
+      const defaultLogs = [
+        { id: 'pl-1', name: 'Brioche Burger Buns', date: '2026-05-18', quantity: 50, unit: 'pcs', totalCost: 750 },
+        { id: 'pl-2', name: 'Angus Beef Patties', date: '2026-05-19', quantity: 30, unit: 'pcs', totalCost: 2400 },
+        { id: 'pl-3', name: 'Aged Cheddar Slices', date: '2026-05-19', quantity: 50, unit: 'pcs', totalCost: 1000 }
+      ];
+      setPurchaseLogs(defaultLogs);
+      localStorage.setItem('tbh_purchase_logs', JSON.stringify(defaultLogs));
+    }
+
+
     // Subscribe to new order entries
     const subscription = supabase
       .channel('public:orders')
@@ -403,16 +434,125 @@ export default function AdminDashboard() {
     setMenuItems(menuItems.filter(m => m.id !== id));
   };
 
+  // Helper methods to save to state and localStorage
+  const saveInventory = (newInv: any[]) => {
+    setInventory(newInv);
+    localStorage.setItem('tbh_inventory', JSON.stringify(newInv));
+  };
+
+  const saveLogs = (newLogs: any[]) => {
+    setPurchaseLogs(newLogs);
+    localStorage.setItem('tbh_purchase_logs', JSON.stringify(newLogs));
+  };
+
   // 3. Inventory Action
   const handleRestock = (id: string) => {
-    setInventory(inventory.map(i => {
+    const updated = inventory.map(i => {
       if (i.id === id) {
         const increment = i.unit === 'kg' ? 2 : 20;
         return { ...i, quantity: parseFloat((i.quantity + increment).toFixed(1)) };
       }
       return i;
-    }));
+    });
+    saveInventory(updated);
+
+    // Write a restock log automatically to purchase logs for transparency!
+    const restockedItem = inventory.find(i => i.id === id);
+    if (restockedItem) {
+      const increment = restockedItem.unit === 'kg' ? 2 : 20;
+      const logEntry = {
+        id: `pl-${Date.now()}`,
+        name: restockedItem.name,
+        date: new Date().toISOString().split('T')[0],
+        quantity: increment,
+        unit: restockedItem.unit,
+        totalCost: 0
+      };
+      saveLogs([logEntry, ...purchaseLogs]);
+    }
   };
+
+  const handleAddPurchase = (e: React.FormEvent) => {
+    e.preventDefault();
+    const finalName = newPurchase.name === 'new' ? newPurchase.customName : newPurchase.name;
+    if (!finalName) {
+      alert('Please specify the product name!');
+      return;
+    }
+    const qty = parseFloat(newPurchase.quantity);
+    const cost = parseFloat(newPurchase.totalCost);
+    if (isNaN(qty) || qty <= 0) {
+      alert('Please enter a valid quantity!');
+      return;
+    }
+    if (isNaN(cost) || cost < 0) {
+      alert('Please enter a valid price/cost!');
+      return;
+    }
+
+    const logEntry = {
+      id: `pl-${Date.now()}`,
+      name: finalName,
+      date: newPurchase.date || new Date().toISOString().split('T')[0],
+      quantity: qty,
+      unit: newPurchase.unit,
+      totalCost: cost
+    };
+
+    const updatedLogs = [logEntry, ...purchaseLogs];
+    saveLogs(updatedLogs);
+
+    // Update inventory stock
+    const existingIndex = inventory.findIndex(i => i.name.toLowerCase() === finalName.toLowerCase());
+    let updatedInventory = [...inventory];
+    if (existingIndex !== -1) {
+      updatedInventory[existingIndex] = {
+        ...updatedInventory[existingIndex],
+        quantity: parseFloat((updatedInventory[existingIndex].quantity + qty).toFixed(2))
+      };
+    } else {
+      updatedInventory.push({
+        id: `i-${Date.now()}`,
+        name: finalName,
+        quantity: qty,
+        minRequired: 10,
+        unit: newPurchase.unit
+      });
+    }
+    saveInventory(updatedInventory);
+
+    setNewPurchase({
+      name: '',
+      customName: '',
+      quantity: '',
+      unit: 'pcs',
+      totalCost: '',
+      date: new Date().toISOString().split('T')[0]
+    });
+    alert(`🎉 Purchase log added! Stock of "${finalName}" increased by ${qty} ${newPurchase.unit}.`);
+  };
+
+  const handleDeletePurchaseLog = (id: string) => {
+    if (!confirm('Are you sure you want to delete this purchase log? This will also revert the stock level.')) return;
+    const logItem = purchaseLogs.find(l => l.id === id);
+    if (!logItem) return;
+
+    const updatedLogs = purchaseLogs.filter(l => l.id !== id);
+    saveLogs(updatedLogs);
+
+    const existingIndex = inventory.findIndex(i => i.name.toLowerCase() === logItem.name.toLowerCase());
+    if (existingIndex !== -1) {
+      let updatedInventory = [...inventory];
+      const newQty = Math.max(0, parseFloat((updatedInventory[existingIndex].quantity - logItem.quantity).toFixed(2)));
+      updatedInventory[existingIndex] = {
+        ...updatedInventory[existingIndex],
+        quantity: newQty
+      };
+      saveInventory(updatedInventory);
+    }
+    alert('Purchase log deleted and stock level reverted!');
+  };
+
 
   // 4. Staff Actions
   const handleAddStaff = (e: React.FormEvent) => {
@@ -995,7 +1135,7 @@ export default function AdminDashboard() {
                       <input 
                         type="text" 
                         placeholder="e.g. Vintage Truffle Double" 
-                        value={newItem.name}
+                        value={newItem.name || ''}
                         onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
                         required
                       />
@@ -1005,7 +1145,7 @@ export default function AdminDashboard() {
                       <div className={styles.formGroup}>
                         <label>Category</label>
                         <select 
-                          value={newItem.category}
+                          value={newItem.category || ''}
                           onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}
                         >
                           <option value="burgers">Burgers</option>
@@ -1018,7 +1158,7 @@ export default function AdminDashboard() {
                         <input 
                           type="number" 
                           placeholder="e.g. 750" 
-                          value={newItem.price}
+                          value={newItem.price || ''}
                           onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
                           required
                         />
@@ -1030,7 +1170,7 @@ export default function AdminDashboard() {
                       <textarea 
                         rows={3} 
                         placeholder="Opulent smoke flavor details..." 
-                        value={newItem.description}
+                        value={newItem.description || ''}
                         onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
                       />
                     </div>
@@ -1072,56 +1212,153 @@ export default function AdminDashboard() {
 
             {/* 4. Product Ingredients Tab View */}
             {activeTab === 'inventory' && (
-              <div className={styles.card}>
-                <h3>Ingredients <span>Stock Level Tracker</span></h3>
-                <div className={styles.inventoryGrid + " mt-6"}>
-                  {inventory.map((i) => {
-                    const ratio = Math.min((i.quantity / i.minRequired) * 50, 100);
-                    const isLow = i.quantity <= i.minRequired;
-                    const isOut = i.quantity <= 0;
+              <div className="space-y-8">
+                {/* Log New Stock Purchase Form */}
+                <div className={`${styles.card} max-w-3xl mx-auto`}>
+                    <h3>Log <span>New Purchase</span></h3>
+                    <form onSubmit={handleAddPurchase}>
+                      <div className={styles.formGroup}>
+                        <label>Ingredient Product</label>
+                        <select
+                          value={newPurchase.name || ''}
+                          onChange={(e) => setNewPurchase({ ...newPurchase, name: e.target.value })}
+                          required
+                        >
+                          <option value="">-- Select Product --</option>
+                          {inventory.map((i) => (
+                            <option key={i.id} value={i.name}>{i.name}</option>
+                          ))}
+                          <option value="new">➕ Other (Type New Product)</option>
+                        </select>
+                      </div>
 
-                    return (
-                      <div key={i.id} className={styles.inventoryCard}>
-                        <div className={styles.inventoryHeader}>
-                          <h4>{i.name}</h4>
-                          <span className={`${styles.stockBadge} ${
-                            isOut ? styles.stockOut : isLow ? styles.stockLowStock : styles.stockInStock
-                          }`}>
-                            {isOut ? 'Out of Stock' : isLow ? 'Low Stock Warning' : 'In Stock'}
-                          </span>
+                      {newPurchase.name === 'new' && (
+                        <div className={styles.formGroup + " mt-4"}>
+                          <label>Custom Product Name</label>
+                          <input 
+                            type="text"
+                            placeholder="e.g. Fresh Jalapeños"
+                            value={newPurchase.customName || ''}
+                            onChange={(e) => setNewPurchase({ ...newPurchase, customName: e.target.value })}
+                            required
+                          />
                         </div>
+                      )}
 
-                        <div className={styles.progressWrapper}>
-                          <div className={styles.progressBarTrack}>
-                            <div 
-                              className={`${styles.progressBarFill} ${
-                                isOut ? styles.progressOut : isLow ? styles.progressLowStock : styles.progressInStock
-                              }`}
-                              style={{ width: `${ratio}%` }}
-                            ></div>
-                          </div>
+                      <div className={styles.formGroup + " mt-4"}>
+                        <label>Purchase Date</label>
+                        <input 
+                          type="date"
+                          value={newPurchase.date || ''}
+                          onChange={(e) => setNewPurchase({ ...newPurchase, date: e.target.value })}
+                          required
+                        />
+                      </div>
 
-                          <div className={styles.progressText}>
-                            <span>Current: {i.quantity} {i.unit}</span>
-                            <span>Min Req: {i.minRequired} {i.unit}</span>
-                          </div>
+                      <div className={styles.formRow + " mt-4"}>
+                        <div className={styles.formGroup}>
+                          <label>Quantity</label>
+                          <input 
+                            type="number"
+                            step="any"
+                            placeholder="e.g. 50"
+                            value={newPurchase.quantity || ''}
+                            onChange={(e) => setNewPurchase({ ...newPurchase, quantity: e.target.value })}
+                            required
+                          />
                         </div>
-
-                        <div className="flex justify-between items-center mt-2">
-                          <span className="text-xs text-white/50">Restock replenishments trigger in +20/2kg packages</span>
-                          <button 
-                            onClick={() => handleRestock(i.id)}
-                            className={styles.actionBtn}
+                        <div className={styles.formGroup}>
+                          <label>Unit</label>
+                          <select
+                            value={newPurchase.unit || ''}
+                            onChange={(e) => setNewPurchase({ ...newPurchase, unit: e.target.value })}
                           >
-                            + Restock
-                          </button>
+                            <option value="pcs">pcs</option>
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="liters">liters</option>
+                            <option value="ml">ml</option>
+                            <option value="sheets">sheets</option>
+                            <option value="packs">packs</option>
+                            <option value="loaves">loaves</option>
+                          </select>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      <div className={styles.formGroup + " mt-4"}>
+                        <label>Total Cost (INR)</label>
+                        <input 
+                          type="number"
+                          placeholder="e.g. 1500"
+                          value={newPurchase.totalCost || ''}
+                          onChange={(e) => setNewPurchase({ ...newPurchase, totalCost: e.target.value })}
+                          required
+                        />
+                      </div>
+
+                      <button type="submit" className={styles.submitBtn}>
+                        <Plus size={16} /> Log Purchase
+                      </button>
+                    </form>
+                  </div>
+
+
+                {/* Bottom - Purchase History Log Ledger */}
+                <div className={styles.card}>
+                  <h3>Purchase <span>History Logs & Ledgers</span></h3>
+                  <div className={styles.tableWrapper + " mt-4"}>
+                    <table className={styles.ordersTable}>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Product Name</th>
+                          <th>Quantity</th>
+                          <th>Total Cost</th>
+                          <th>Unit Price</th>
+                          <th style={{ textAlign: 'right' }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {purchaseLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} style={{ textAlign: 'center', opacity: 0.5, padding: '30px' }}>
+                              ⌛ No purchase entries logged yet. Add your first stock purchase above!
+                            </td>
+                          </tr>
+                        ) : (
+                          purchaseLogs.map((log) => {
+                            const unitPrice = log.quantity > 0 ? (log.totalCost / log.quantity).toFixed(2) : '0.00';
+                            return (
+                              <tr key={log.id}>
+                                <td className="font-mono text-gold/80">{log.date}</td>
+                                <td>
+                                  <div className="font-bold text-white">{log.name}</div>
+                                </td>
+                                <td className="font-bold text-white/90">
+                                  {log.quantity} <span className="text-xs text-white/50">{log.unit}</span>
+                                </td>
+                                <td className="font-black text-gold">₹{log.totalCost}</td>
+                                <td className="text-xs text-white/60">₹{unitPrice} / {log.unit}</td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button 
+                                    onClick={() => handleDeletePurchaseLog(log.id)}
+                                    className={styles.deleteBtn}
+                                    style={{ position: 'relative', top: 'auto', right: 'auto', display: 'inline-flex' }}
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}
+
 
             {/* 5. Staff Directory Tab View */}
             {activeTab === 'staff' && (
@@ -1250,13 +1487,25 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className={styles.formGroup + " mt-4"}>
-                      <label>Image Unsplash URL</label>
+                      <label>Upload Image (Direct File)</label>
                       <input 
-                        type="url" 
-                        placeholder="https://images.unsplash.com/..." 
-                        value={newGalleryUrl}
-                        onChange={(e) => setNewGalleryUrl(e.target.value)}
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setNewGalleryUrl(reader.result as string);
+                            };
+                            reader.readAsDataURL(file);
+                          } else {
+                            setNewGalleryUrl('');
+                          }
+                        }}
                         required
+                        className="file-input-custom"
+                        style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', color: '#fff' }}
                       />
                     </div>
 
@@ -1711,7 +1960,7 @@ export default function AdminDashboard() {
                   <label>Guest Name</label>
                   <input 
                     type="text"
-                    value={walkInCustomer.name}
+                    value={walkInCustomer.name || ''}
                     onChange={(e) => setWalkInCustomer({ ...walkInCustomer, name: e.target.value })}
                     placeholder="e.g. Walk-in Guest"
                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
@@ -1723,7 +1972,7 @@ export default function AdminDashboard() {
                   <label>Phone Number (Optional)</label>
                   <input 
                     type="tel"
-                    value={walkInCustomer.phone}
+                    value={walkInCustomer.phone || ''}
                     onChange={(e) => setWalkInCustomer({ ...walkInCustomer, phone: e.target.value })}
                     placeholder="e.g. 9876543210"
                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
@@ -1734,7 +1983,7 @@ export default function AdminDashboard() {
                   <label>Table / Destination Details</label>
                   <input 
                     type="text"
-                    value={walkInCustomer.address}
+                    value={walkInCustomer.address || ''}
                     onChange={(e) => setWalkInCustomer({ ...walkInCustomer, address: e.target.value })}
                     placeholder="e.g. Dine-In Table 3 or Takeaway"
                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
@@ -1750,7 +1999,7 @@ export default function AdminDashboard() {
                   <div className={styles.formGroup}>
                     <label>Payment Method</label>
                     <select
-                      value={walkInCustomer.paymentMethod}
+                      value={walkInCustomer.paymentMethod || ''}
                       onChange={(e) => setWalkInCustomer({ ...walkInCustomer, paymentMethod: e.target.value })}
                       style={{ background: '#1C1512', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
                     >
@@ -1762,7 +2011,7 @@ export default function AdminDashboard() {
                   <div className={styles.formGroup}>
                     <label>Payment Status</label>
                     <select
-                      value={walkInCustomer.paymentStatus}
+                      value={walkInCustomer.paymentStatus || ''}
                       onChange={(e) => setWalkInCustomer({ ...walkInCustomer, paymentStatus: e.target.value })}
                       style={{ background: '#1C1512', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
                     >
@@ -1775,7 +2024,7 @@ export default function AdminDashboard() {
                 <div className={styles.formGroup} style={{ marginTop: '12px' }}>
                   <label>Initial Kitchen Status</label>
                   <select
-                    value={walkInCustomer.status}
+                    value={walkInCustomer.status || ''}
                     onChange={(e) => setWalkInCustomer({ ...walkInCustomer, status: e.target.value })}
                     style={{ background: '#1C1512', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
                   >
