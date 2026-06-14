@@ -1275,7 +1275,7 @@ export default function AdminDashboard() {
                 {/* Catalog List Table */}
                 <div className={`${styles.card} col-span-2`}>
                   <h3>Gourmet <span>Menu Catalog</span></h3>
-                  <div className={styles.tableWrapper}>
+                  <div className={`${styles.tableWrapper} custom-scrollbar`} style={{ maxHeight: '75vh', overflowY: 'auto' }}>
                     <table className={styles.ordersTable}>
                       <thead>
                         <tr>
@@ -1327,7 +1327,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Add/Edit Burger Form */}
-                <div className={styles.card}>
+                <div className={`${styles.card} sticky top-[20px] h-fit`}>
                   <h3>{editingMenuItemId ? 'Edit' : 'Add'} <span>Gourmet Item</span></h3>
                   <form onSubmit={handleMenuSubmit}>
                     <div className={styles.formGroup}>
