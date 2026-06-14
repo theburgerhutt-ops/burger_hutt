@@ -102,7 +102,7 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<any[]>(defaultMockOrders);
 
   // 2. Menu Items Data State (initialized clean)
-  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<any[]>(menuData);
 
   // New Menu Item Form State
   const [newItem, setNewItem] = useState({
