@@ -18,7 +18,8 @@ import {
   Image, 
   DollarSign, 
   Bell, 
-  X 
+  X,
+  Download 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { menuData } from '@/data/menu';
@@ -584,6 +585,31 @@ export default function AdminDashboard() {
   const handleCancelEdit = () => {
     setEditingMenuItemId(null);
     setNewItem({ name: '', category: 'burgers', price: '', description: '', image: '', isSpicy: false, isVeg: false, isBestseller: false });
+  };
+
+  const exportMenuToCSV = () => {
+    const headers = ['Item ID', 'Name', 'Category', 'Price (INR)', 'Vegetarian', 'Spicy', 'Bestseller', 'Description'];
+    
+    const rows = menuItems.map(m => {
+      const isSpicy = m.tags?.includes('spicy') ? 'Yes' : 'No';
+      const isBestseller = m.tags?.includes('bestseller') ? 'Yes' : 'No';
+      const isVeg = m.isVeg ? 'Yes' : 'No';
+      const description = `"${(m.description || '').replace(/"/g, '""')}"`;
+      const name = `"${(m.name || '').replace(/"/g, '""')}"`;
+      
+      return [m.id, name, m.category, m.price, isVeg, isSpicy, isBestseller, description].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `BurgerHutt_Menu_Catalog.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleDeleteMenuItem = (id: string) => {
@@ -1274,7 +1300,16 @@ export default function AdminDashboard() {
                 
                 {/* Catalog List Table */}
                 <div className={`${styles.card} col-span-2`}>
-                  <h3>Gourmet <span>Menu Catalog</span></h3>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="!mb-0">Gourmet <span>Menu Catalog</span></h3>
+                    <button 
+                      onClick={exportMenuToCSV}
+                      className="flex items-center gap-1 text-xs font-bold"
+                      style={{ background: 'rgba(212, 164, 75, 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer' }}
+                    >
+                      <Download size={14} /> Export to Excel
+                    </button>
+                  </div>
                   <div className={`${styles.tableWrapper} custom-scrollbar`} style={{ maxHeight: '75vh', overflowY: 'auto' }}>
                     <table className={styles.ordersTable}>
                       <thead>
