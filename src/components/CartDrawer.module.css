@@ -105,6 +105,16 @@
   margin-bottom: 5px;
 }
 
+.itemSubCategory {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+  letter-spacing: 0.05em;
+}
+
 .itemPrice {
   color: var(--primary);
   font-weight: 700;

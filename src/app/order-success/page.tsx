@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, Home, ShoppingBag, Receipt, Bell, ShieldAlert, Clock, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { io } from 'socket.io-client';
 
 const OrderSuccessPage = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -50,13 +51,10 @@ const OrderSuccessPage = () => {
 
     const fetchOrder = async (idVal: string) => {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('id', idVal)
-          .single();
+        const res = await fetch(`/api/orders/${idVal}`);
+        if (!res.ok) throw new Error('Order not found');
+        const data = await res.json();
         
-        if (error) throw error;
         if (data) {
           setOrder(data);
           // If already ready, show alarm
@@ -92,8 +90,21 @@ const OrderSuccessPage = () => {
         )
         .subscribe();
 
+      // 3. Setup Socket.io listener for both local and Supabase real-time updates
+      const socket = io();
+      socket.on('order-updated', (updated: any) => {
+        if (updated.id === id || updated.order_id === id) {
+          setOrder(updated);
+          if (updated.status === 'ready') {
+            setShowAlarmModal(true);
+            playAlarmBell();
+          }
+        }
+      });
+
       return () => {
         channel.unsubscribe();
+        socket.disconnect();
         stopAlarmBell();
       };
     } else {

@@ -44,7 +44,7 @@ export default function FullMenuPage() {
               zIndex: 3
             }}
           >
-            <img src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&q=80&w=400" alt="Burger" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src="/menu/paneer_pindee_burger.png" alt="Burger" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)' }} />
           </motion.div>
 
@@ -68,7 +68,7 @@ export default function FullMenuPage() {
               zIndex: 2
             }}
           >
-            <img src="https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&q=80&w=400" alt="Shake" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src="/menu/strawberry_milkshake.png" alt="Shake" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6), transparent)' }} />
           </motion.div>
 
@@ -92,7 +92,7 @@ export default function FullMenuPage() {
               zIndex: 4
             }}
           >
-            <img src="https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&q=80&w=400" alt="Drink" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src="/menu/virgin_mojito.png" alt="Drink" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)' }} />
           </motion.div>
         </div>

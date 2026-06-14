@@ -25,7 +25,7 @@ const MapSection = () => {
                 </div>
                 <div>
                   <h4>Our Location</h4>
-                  <p>123 Gourmet Street, Foodie Valley, New Delhi - 110001</p>
+                  <p>Mukta Prasad, Bikaner, Rajasthan - 334004</p>
                 </div>
               </div>
 
@@ -45,7 +45,7 @@ const MapSection = () => {
                 </div>
                 <div>
                   <h4>Contact Info</h4>
-                  <p>+91 98765 43210<br />hello@burgerhut.com</p>
+                  <p>+91 63671 12075<br />hello@burgerhut.com</p>
                 </div>
               </div>
             </div>
@@ -69,7 +69,7 @@ const MapSection = () => {
           >
             <div className={styles.mapOverlay} />
             <iframe 
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3502.123456789!2d77.123456789!3d28.123456789!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjjCsDA3JzM0LjUiTiA3N8KwMDcnMjQuNCJF!5e0!3m2!1sen!2sin!4v1620000000000!5m2!1sen!2sin" 
+              src="https://maps.google.com/maps?q=Mukta%20Prasad%2C%20Bikaner%2C%20Rajasthan&t=&z=15&ie=UTF8&iwloc=&output=embed" 
               width="100%" 
               height="100%" 
               style={{ border: 0 }} 

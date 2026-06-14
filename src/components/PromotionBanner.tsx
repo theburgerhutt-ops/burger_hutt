@@ -21,7 +21,7 @@ const PromotionBanner = () => {
           <div className={styles.item}>
             <div className={styles.textGroup}>
               <span className={styles.label}>ORDER ON CALL</span>
-              <span className={styles.value}>+91 98765 43210</span>
+              <span className={styles.value}>+91 63671 12075</span>
               <span className={styles.value}>+91 87654 32109</span>
             </div>
           </div>

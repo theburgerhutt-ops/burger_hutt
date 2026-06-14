@@ -81,7 +81,7 @@ export default function AboutPage() {
                 zIndex: -1 
               }} />
               <img 
-                src="https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&q=80&w=800" 
+                src="/menu/paneer_pindee_burger.png" 
                 alt="Burger Making" 
                 style={{ width: '100%', height: '500px', objectFit: 'cover' }}
               />

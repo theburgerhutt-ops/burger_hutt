@@ -87,6 +87,7 @@
   top: 120px; /* Force it to the top area */
   left: 0;
   width: 100%;
+  padding: 0 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -187,8 +188,10 @@
 }
 
 @media (max-width: 768px) {
-  .mainTitle { font-size: 3.5rem; }
-  .quote { font-size: 1.5rem; }
-  .ctaGroup { flex-direction: column; gap: 20px; width: 100%; }
-  .btnGold, .btnOutline { width: 100%; padding: 16px 30px; }
+  .hero { height: auto; min-height: 100vh; padding-bottom: 50px; }
+  .brandingWrapper { top: 100px; }
+  .mainTitle { font-size: 3.5rem !important; }
+  .quote { font-size: 1.5rem; text-align: center; }
+  .ctaGroup { flex-direction: column; gap: 15px; width: 100%; }
+  .btnGold, .btnOutline { width: 100%; padding: 16px 20px; }
 }

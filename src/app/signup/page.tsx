@@ -36,7 +36,8 @@ function SignupForm() {
       setSuccess(true);
       setLoading(false);
       setTimeout(() => {
-        router.push(`/login?redirect=${encodeURIComponent(redirect)}`);
+        router.push(redirect);
+        router.refresh();
       }, 2000);
     } else {
       setError(result.error || 'Failed to register account. Please try again.');

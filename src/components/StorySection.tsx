@@ -25,7 +25,7 @@ const StorySection = () => {
               className={styles.mainImageFrame}
             >
               <img 
-                src="https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&q=80&w=800" 
+                src="/menu/restaurant_interior.png" 
                 alt="The Burger Hut Interior" 
                 className={styles.mainImage}
               />
@@ -100,7 +100,7 @@ const StorySection = () => {
               transition={{ duration: 0.8, delay: 1.2 }}
               className={styles.signature}
             >
-              <span className={styles.sigName}>Shivanshu Kushwah</span>
+              <span className={styles.sigName}>Sanjay Kumar</span>
               <span className={styles.sigTitle}>Founder & Executive Chef</span>
             </motion.div>
 

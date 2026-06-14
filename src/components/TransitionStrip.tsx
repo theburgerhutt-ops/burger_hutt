@@ -4,7 +4,6 @@ import styles from './TransitionStrip.module.css';
 
 const features = [
   { id: 1, text: "ARTISAN BUNS", icon: "🥖" },
-  { id: 2, text: "PRIME BEEF", icon: "🥩" },
   { id: 3, text: "ORGANIC VEGGIES", icon: "🥬" },
   { id: 4, text: "SECRET SAUCE", icon: "🍯" },
   { id: 5, text: "HAND-CUT FRIES", icon: "🍟" },

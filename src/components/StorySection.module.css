@@ -220,9 +220,10 @@
     gap: 60px;
   }
   
-  .imageWrapper {
+  .collageWrapper {
     max-width: 600px;
     margin: 0 auto;
+    height: 450px;
   }
   
   .title {
@@ -231,6 +232,10 @@
 }
 
 @media (max-width: 480px) {
+  .collageWrapper {
+    height: 300px;
+  }
+
   .experienceBadge {
     bottom: -10px;
     right: -10px;

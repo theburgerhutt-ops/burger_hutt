@@ -21,18 +21,73 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { menuData } from '@/data/menu';
+import { io } from 'socket.io-client';
 import styles from './Admin.module.css';
+
+const defaultMockOrders = [
+  {
+    id: 'mock-1',
+    order_id: 'TBH-8429',
+    customer_name: 'Rahul Bikaner',
+    customer_phone: '6367112075',
+    customer_address: 'Table 4 (Dine-in)',
+    items: [
+      { id: 'm-1', name: 'Vintage Truffle Double', price: 750, quantity: 2 },
+      { id: 'm-3', name: 'Hazelnut Frappe', price: 280, quantity: 1 }
+    ],
+    total_amount: 1780,
+    payment_method: 'Cash',
+    payment_status: 'paid',
+    status: 'preparing',
+    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    screenshot_url: null
+  },
+  {
+    id: 'mock-2',
+    order_id: 'TBH-3195',
+    customer_name: 'Priya Verma',
+    customer_phone: '9876543210',
+    customer_address: 'Mukta Prasad Colony, Bikaner',
+    items: [
+      { id: 'm-2', name: '24K Gold Luxury Burger', price: 1200, quantity: 1 },
+      { id: 'm-4', name: 'Classic Cold Coffee', price: 220, quantity: 2 }
+    ],
+    total_amount: 1640,
+    payment_method: 'Online UPI',
+    payment_status: 'pending',
+    status: 'pending_verification',
+    created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+    screenshot_url: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?auto=format&fit=crop&q=80&w=400'
+  },
+  {
+    id: 'mock-3',
+    order_id: 'TBH-7042',
+    customer_name: 'Amit Kumar',
+    customer_phone: '9988776655',
+    customer_address: 'Takeaway Counter',
+    items: [
+      { id: 'm-5', name: 'Nature Crafted Shake', price: 320, quantity: 3 }
+    ],
+    total_amount: 960,
+    payment_method: 'Cash',
+    payment_status: 'paid',
+    status: 'ready',
+    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    screenshot_url: null
+  }
+];
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'inventory' | 'staff' | 'gallery' | 'offers' | 'reviews' | 'settings'>('dashboard');
   const [toast, setToast] = useState<{ id: string; title: string; body: string; time: string } | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
+  const [selectedBillOrder, setSelectedBillOrder] = useState<any | null>(null);
 
   // Stats State
   const [stats, setStats] = useState({
-    totalOrders: 0,
-    totalRevenue: 0,
-    pendingOrders: 0,
+    totalOrders: 3,
+    totalRevenue: 2740,
+    pendingOrders: 1,
   });
 
   // Business Control Settings
@@ -44,7 +99,7 @@ export default function AdminDashboard() {
   });
 
   // 1. Orders Data State (initialized clean)
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<any[]>(defaultMockOrders);
 
   // 2. Menu Items Data State (initialized clean)
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -92,11 +147,11 @@ export default function AdminDashboard() {
   const [newGalleryUrl, setNewGalleryUrl] = useState('');
   const [newGalleryTitle, setNewGalleryTitle] = useState('');
 
-  // 6. Offers Mock State (initialized clean)
-  const [offers, setOffers] = useState<any[]>([]);
-
-  const [newOfferCode, setNewOfferCode] = useState('');
-  const [newOfferDiscount, setNewOfferDiscount] = useState('');
+  // 6. Global Offer State
+  const [activeGlobalOffer, setActiveGlobalOffer] = useState({ title: '', discountPercentage: 0, active: false, expiryDate: '' });
+  const [newOfferTitle, setNewOfferTitle] = useState('');
+  const [newOfferDiscount, setNewOfferDiscount] = useState<number | ''>('');
+  const [newOfferExpiry, setNewOfferExpiry] = useState('');
 
   // 7. Customer Reviews State (initialized clean)
   const [reviews, setReviews] = useState<any[]>([]);
@@ -222,18 +277,22 @@ export default function AdminDashboard() {
     }
   };
 
-  // Load real orders from Supabase on mount & setup real-time listener
+  // Load real orders from Supabase on mount & setup real-time listener and polling
   useEffect(() => {
-    const fetchOrders = async () => {
+    let knownOrderIds = new Set<string>();
+
+    fetch('/api/offer')
+      .then(res => res.json())
+      .then(data => setActiveGlobalOffer(data))
+      .catch(err => console.error("Failed to load offer:", err));
+
+    const fetchOrders = async (isInitial = false) => {
       try {
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .order('created_at', { ascending: false });
+        const res = await fetch('/api/orders');
+        if (!res.ok) throw new Error('Failed to fetch orders');
+        const data = await res.json();
         
-        if (error) throw error;
         if (data && data.length > 0) {
-          // Map backend schema columns to the component fields
           const mappedOrders = data.map((o: any) => ({
             id: o.id,
             order_id: o.order_id,
@@ -248,11 +307,30 @@ export default function AdminDashboard() {
             created_at: o.created_at,
             screenshot_url: o.screenshot_url
           }));
-          setOrders(mappedOrders);
-          recalculateStats(mappedOrders);
+
+          if (isInitial) {
+            knownOrderIds = new Set(mappedOrders.map((o: any) => o.id));
+            setOrders(mappedOrders);
+            recalculateStats(mappedOrders);
+          } else {
+            const newOrders = mappedOrders.filter((o: any) => !knownOrderIds.has(o.id));
+            if (newOrders.length > 0) {
+              newOrders.forEach((o: any) => knownOrderIds.add(o.id));
+              setToast({
+                id: `toast-${Date.now()}`,
+                title: '⚡ LIVE ORDER PLACED!',
+                body: `${newOrders[0].customer_name} just ordered (Total: ₹${newOrders[0].total_amount})`,
+                time: 'Just now'
+              });
+              playNotificationSound();
+            }
+            // Always update state in case statuses changed
+            setOrders(mappedOrders);
+            recalculateStats(mappedOrders);
+          }
         }
       } catch (err) {
-        console.error('Error loading admin orders:', err);
+        console.warn('Unable to load orders from API. Falling back to local offline queue.');
       }
     };
 
@@ -268,12 +346,49 @@ export default function AdminDashboard() {
           setReviews(data);
         }
       } catch (err) {
-        console.error('Error loading admin reviews:', err);
+        console.warn('Unable to load admin reviews from Supabase database. Falling back to local feedback streams.');
       }
     };
 
-    fetchOrders();
+    fetchOrders(true);
     fetchReviews();
+
+    // Set up Socket.io client
+    const socket = io(); // Connects to current host
+
+    socket.on('new-order', (newOrder: any) => {
+      console.log('Socket.io received new order:', newOrder);
+      if (knownOrderIds.has(newOrder.id)) return;
+      knownOrderIds.add(newOrder.id);
+      
+      const mappedNew = {
+        id: newOrder.id,
+        order_id: newOrder.order_id,
+        customer_name: newOrder.customer_name,
+        customer_phone: newOrder.customer_phone,
+        customer_address: newOrder.customer_address,
+        items: typeof newOrder.items === 'string' ? JSON.parse(newOrder.items) : newOrder.items,
+        total_amount: newOrder.total_amount,
+        payment_method: newOrder.payment_method,
+        payment_status: newOrder.payment_status || 'pending',
+        status: newOrder.status,
+        created_at: newOrder.created_at,
+        screenshot_url: newOrder.screenshot_url
+      };
+      
+      setOrders(prev => {
+        const updated = [mappedNew, ...prev];
+        recalculateStats(updated);
+        return updated;
+      });
+      setToast({
+        id: `toast-${Date.now()}`,
+        title: '⚡ LIVE ORDER PLACED!',
+        body: `${mappedNew.customer_name} just ordered (Total: ₹${mappedNew.total_amount})`,
+        time: 'Just now'
+      });
+      playNotificationSound();
+    });
 
     // Load inventory and purchase logs from localStorage
     const savedInventory = localStorage.getItem('tbh_inventory');
@@ -299,6 +414,9 @@ export default function AdminDashboard() {
       .channel('public:orders')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
         const newOrder = payload.new;
+        if (knownOrderIds.has(newOrder.id)) return; // prevent duplicate if polling got it first
+        knownOrderIds.add(newOrder.id);
+        
         const mappedNew = {
           id: newOrder.id,
           order_id: newOrder.order_id,
@@ -314,7 +432,11 @@ export default function AdminDashboard() {
           screenshot_url: newOrder.screenshot_url
         };
         
-        setOrders(prev => [mappedNew, ...prev]);
+        setOrders(prev => {
+          const updated = [mappedNew, ...prev];
+          recalculateStats(updated);
+          return updated;
+        });
         setToast({
           id: `toast-${Date.now()}`,
           title: '⚡ LIVE ORDER PLACED!',
@@ -326,6 +448,7 @@ export default function AdminDashboard() {
       .subscribe();
 
     return () => {
+      socket.disconnect();
       subscription.unsubscribe();
     };
   }, []);
@@ -343,15 +466,18 @@ export default function AdminDashboard() {
   // 1. Orders Actions
   const handleStatusChange = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ 
-          status: newStatus,
-          payment_status: newStatus === 'delivered' ? 'paid' : undefined
-        })
-        .eq('id', id);
+      const updates = { 
+        status: newStatus,
+        ...(newStatus === 'delivered' ? { payment_status: 'paid' } : {})
+      };
 
-      if (error) throw error;
+      const res = await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      
+      if (!res.ok) throw new Error('Failed API request');
 
       const updated = orders.map(o => {
         if (o.id === id) {
@@ -373,12 +499,13 @@ export default function AdminDashboard() {
 
   const handleVerifyPayment = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ payment_status: 'paid', status: 'preparing' })
-        .eq('id', id);
+      const res = await fetch(`/api/orders/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_status: 'paid', status: 'preparing' })
+      });
 
-      if (error) throw error;
+      if (!res.ok) throw new Error('Failed API request');
 
       const updated = orders.map(o => {
         if (o.id === id) {
@@ -587,22 +714,43 @@ export default function AdminDashboard() {
   };
 
   // 6. Offers Actions
-  const handleAddOffer = (e: React.FormEvent) => {
+  const handlePublishOffer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newOfferCode || !newOfferDiscount) return;
-    setOffers([...offers, {
-      id: `o-${Date.now()}`,
-      code: newOfferCode.toUpperCase(),
-      discount: newOfferDiscount,
-      validity: 'Promo Season',
-      active: true
-    }]);
-    setNewOfferCode('');
-    setNewOfferDiscount('');
+    if (!newOfferTitle || newOfferDiscount === '' || !newOfferExpiry) return;
+    try {
+      const res = await fetch('/api/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newOfferTitle,
+          discountPercentage: Number(newOfferDiscount),
+          active: true,
+          expiryDate: newOfferExpiry
+        })
+      });
+      const data = await res.json();
+      setActiveGlobalOffer(data.offer);
+      setNewOfferTitle('');
+      setNewOfferDiscount('');
+      setNewOfferExpiry('');
+      alert('Global Offer Published! Banner activated and prices auto-adjusted.');
+    } catch (err) {
+      alert('Failed to publish offer');
+    }
   };
 
-  const toggleOffer = (id: string) => {
-    setOffers(offers.map(o => o.id === id ? { ...o, active: !o.active } : o));
+  const toggleGlobalOffer = async (currentActive: boolean) => {
+    try {
+      const res = await fetch('/api/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active: !currentActive })
+      });
+      const data = await res.json();
+      setActiveGlobalOffer(data.offer);
+    } catch (err) {
+      alert('Failed to toggle offer');
+    }
   };
 
   // 7. Reviews Actions
@@ -932,6 +1080,13 @@ export default function AdminDashboard() {
                                       <option value="delivered">Delivered</option>
                                       <option value="cancelled">Cancelled</option>
                                     </select>
+                                    <button 
+                                      onClick={() => setSelectedBillOrder(o)}
+                                      className={styles.actionBtn}
+                                      style={{ padding: '4px 6px', fontSize: '10px', background: 'rgba(212,164,75,0.15)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                                    >
+                                      🧾 Bill
+                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -1067,6 +1222,13 @@ export default function AdminDashboard() {
                                 <option value="delivered">Delivered</option>
                                 <option value="cancelled">Cancelled</option>
                               </select>
+                              <button 
+                                onClick={() => setSelectedBillOrder(o)}
+                                className={styles.actionBtn}
+                                style={{ background: 'rgba(212,164,75,0.15)', border: '1px solid var(--primary)', color: 'var(--primary)' }}
+                              >
+                                🧾 Bill
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1517,63 +1679,77 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* 7. Offers & Promotions Tab View */}
-            {activeTab === 'offers' && (
-              <div className="grid grid-cols-3 gap-6">
-                
-                {/* Coupon Cards */}
-                <div className={`${styles.card} col-span-2`}>
-                  <h3>Promotional <span>Coupons Manager</span></h3>
-                  <div className={styles.couponGrid + " mt-4"}>
-                    {offers.map((o) => (
-                      <div key={o.id} className={styles.couponCard}>
-                        <div className={styles.couponCode}>{o.code}</div>
-                        <h4>{o.discount}</h4>
-                        <p>{o.validity}</p>
-
-                        <div className={styles.couponToggle}>
-                          <label className={styles.switch}>
-                            <input 
-                              type="checkbox" 
-                              checked={o.active}
-                              onChange={() => toggleOffer(o.id)}
-                            />
-                            <span className={styles.slider}></span>
-                          </label>
-                        </div>
+                {activeTab === 'offers' && (
+              <div className="grid grid-cols-2 gap-6">
+                <div className={styles.card}>
+                  <h3>Global <span>Active Offer</span></h3>
+                  <div className="mt-4">
+                    {activeGlobalOffer.active ? (
+                      <div style={{ padding: '25px', background: 'rgba(212, 164, 75, 0.1)', border: '1px solid var(--primary)', borderRadius: '12px', textAlign: 'center' }}>
+                        <h4 style={{ color: 'white', marginBottom: '10px', fontSize: '1.2rem', fontFamily: 'var(--font-cormorant)' }}>{activeGlobalOffer.title}</h4>
+                        <p style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '10px' }}>{activeGlobalOffer.discountPercentage}% OFF</p>
+                        {activeGlobalOffer.expiryDate && (
+                          <p style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '20px' }}>
+                            Expires on: {new Date(activeGlobalOffer.expiryDate).toLocaleDateString('en-IN')}
+                          </p>
+                        )}
+                        <button onClick={() => toggleGlobalOffer(activeGlobalOffer.active)} style={{ background: 'transparent', border: '1px solid #FF3B30', color: '#FF3B30', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                          Deactivate Global Offer
+                        </button>
                       </div>
-                    ))}
+                    ) : (
+                      <div style={{ padding: '30px', opacity: 0.6, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: '12px' }}>
+                        <p>No active global offer right now.</p>
+                        {activeGlobalOffer.title && (
+                           <button onClick={() => toggleGlobalOffer(activeGlobalOffer.active)} style={{ marginTop: '20px', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                             Reactivate Previous: {activeGlobalOffer.title}
+                           </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Create Promo Code form */}
                 <div className={styles.card}>
-                  <h3>Create <span>Coupon Code</span></h3>
-                  <form onSubmit={handleAddOffer}>
+                  <h3>Create & Publish <span>Global Offer</span></h3>
+                  <form onSubmit={handlePublishOffer}>
                     <div className={styles.formGroup}>
-                      <label>Coupon Code Name</label>
+                      <label>Offer Title / Banner Text</label>
                       <input 
                         type="text" 
-                        placeholder="e.g. BOGOFREE" 
-                        value={newOfferCode}
-                        onChange={(e) => setNewOfferCode(e.target.value)}
+                        placeholder="e.g. Weekend Flash Sale!" 
+                        value={newOfferTitle}
+                        onChange={(e) => setNewOfferTitle(e.target.value)}
                         required
                       />
                     </div>
 
                     <div className={styles.formGroup + " mt-4"}>
-                      <label>Discount Details</label>
+                      <label>Discount Percentage (%)</label>
                       <input 
-                        type="text" 
-                        placeholder="e.g. ₹200 OFF on orders above ₹1000" 
+                        type="number" 
+                        placeholder="e.g. 20" 
+                        min="1" max="100"
                         value={newOfferDiscount}
-                        onChange={(e) => setNewOfferDiscount(e.target.value)}
+                        onChange={(e) => setNewOfferDiscount(e.target.value === '' ? '' : Number(e.target.value))}
+                        required
+                      />
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Offer Expiry Date</label>
+                      <input 
+                        type="date" 
+                        min={new Date().toISOString().split('T')[0]}
+                        value={newOfferExpiry}
+                        onChange={(e) => setNewOfferExpiry(e.target.value)}
                         required
                       />
                     </div>
 
                     <button type="submit" className={styles.submitBtn}>
-                      <Plus size={16} /> Deploy Promo Code
+                      <Plus size={16} /> Deploy & Publish Global Offer
                     </button>
                   </form>
                 </div>
@@ -2214,6 +2390,292 @@ export default function AdminDashboard() {
               </div>
 
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Digital & Print Invoice Bill Modal */}
+      {selectedBillOrder && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(20px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          padding: '20px',
+          overflowY: 'auto'
+        }}>
+          {/* Custom POS printer CSS rules embedded dynamically */}
+          <style dangerouslySetInnerHTML={{__html: `
+            @media print {
+              body * {
+                visibility: hidden !important;
+              }
+              #receipt-print-area, #receipt-print-area * {
+                visibility: visible !important;
+              }
+              #receipt-print-area {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 76mm !important; /* Standard thermal receipt width */
+                padding: 4mm !important;
+                background: white !important;
+                color: black !important;
+                font-family: 'Courier New', Courier, monospace !important;
+                font-size: 12px !important;
+                line-height: 1.4 !important;
+                box-shadow: none !important;
+                border: none !important;
+              }
+              #receipt-print-area button, #receipt-print-area .no-print {
+                display: none !important;
+              }
+            }
+          `}} />
+
+          <div style={{
+            background: 'rgba(18, 13, 11, 0.98)',
+            border: '1px solid var(--primary)',
+            borderRadius: '24px',
+            padding: '30px',
+            width: '100%',
+            maxWidth: '550px',
+            boxShadow: '0 25px 60px rgba(0, 0, 0, 0.95)',
+            position: 'relative'
+          }}>
+            <button 
+              onClick={() => setSelectedBillOrder(null)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(255,255,255,0.05)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 style={{ 
+              fontFamily: 'var(--font-cormorant)', 
+              fontSize: '1.8rem', 
+              color: 'var(--primary)', 
+              marginBottom: '20px', 
+              textAlign: 'center',
+              letterSpacing: '0.05em'
+            }}>
+              Gourmet Invoice & Receipt
+            </h3>
+
+            {/* Bill Receipt Render Wrapper */}
+            <div 
+              id="receipt-print-area" 
+              style={{
+                background: '#fff',
+                color: '#000',
+                padding: '24px',
+                borderRadius: '16px',
+                fontFamily: 'Courier New, Courier, monospace',
+                fontSize: '13px',
+                lineHeight: '1.4',
+                boxShadow: 'inset 0 0 10px rgba(0,0,0,0.1)',
+                border: '1px solid rgba(0,0,0,0.15)',
+                marginBottom: '25px'
+              }}
+            >
+              <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+                <h2 style={{ margin: '0 0 5px 0', fontSize: '18px', fontWeight: '900', letterSpacing: '2px', textTransform: 'uppercase' }}>BURGER HUT</h2>
+                <p style={{ margin: '0', fontSize: '11px', opacity: 0.8 }}>Premium AI-Powered Cafe</p>
+                <p style={{ margin: '3px 0 0 0', fontSize: '10px', opacity: 0.8 }}>Mukta Prasad, Bikaner, Rajasthan</p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '10px', opacity: 0.8 }}>☎ +91 63671 12075</p>
+                <div style={{ borderBottom: '1px dashed #000', margin: '12px 0' }} />
+              </div>
+
+              <div style={{ marginBottom: '12px', fontSize: '11px' }}>
+                <div><strong>Order ID:</strong> <span style={{ fontFamily: 'monospace' }}>{selectedBillOrder.order_id}</span></div>
+                <div><strong>Date:</strong> {new Date(selectedBillOrder.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+                <div><strong>Customer:</strong> {selectedBillOrder.customer_name}</div>
+                <div><strong>Phone:</strong> {selectedBillOrder.customer_phone}</div>
+                <div><strong>Address/Table:</strong> {selectedBillOrder.customer_address}</div>
+                <div><strong>Payment:</strong> {selectedBillOrder.payment_method} ({selectedBillOrder.payment_status?.toUpperCase()})</div>
+              </div>
+
+              <div style={{ borderBottom: '1px dashed #000', margin: '10px 0' }} />
+
+              {/* Items details table */}
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px dashed #000' }}>
+                    <th style={{ textAlign: 'left', paddingBottom: '5px' }}>ITEM</th>
+                    <th style={{ textAlign: 'center', paddingBottom: '5px' }}>QTY</th>
+                    <th style={{ textAlign: 'right', paddingBottom: '5px' }}>PRICE</th>
+                    <th style={{ textAlign: 'right', paddingBottom: '5px' }}>TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedBillOrder.items && selectedBillOrder.items.map((item: any, idx: number) => (
+                    <tr key={idx}>
+                      <td style={{ paddingTop: '6px', paddingBottom: '6px', textAlign: 'left', fontWeight: 'bold' }}>{item.name}</td>
+                      <td style={{ textAlign: 'center' }}>{item.quantity}</td>
+                      <td style={{ textAlign: 'right' }}>₹{item.price}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 'bold' }}>₹{item.price * item.quantity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              <div style={{ borderBottom: '1px dashed #000', margin: '10px 0' }} />
+
+              <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Subtotal:</span>
+                  <span>₹{selectedBillOrder.total_amount - Math.round(selectedBillOrder.total_amount * 0.05)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>SGST (2.5%):</span>
+                  <span>₹{Math.round(selectedBillOrder.total_amount * 0.025)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>CGST (2.5%):</span>
+                  <span>₹{Math.round(selectedBillOrder.total_amount * 0.025)}</span>
+                </div>
+                <div style={{ borderBottom: '1px dashed #000', margin: '6px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 'bold' }}>
+                  <span>GRAND TOTAL:</span>
+                  <span>₹{selectedBillOrder.total_amount}</span>
+                </div>
+              </div>
+
+              <div style={{ borderBottom: '1px dashed #000', margin: '12px 0' }} />
+
+              <div style={{ textAlign: 'center', fontSize: '10px', fontStyle: 'italic' }}>
+                <p style={{ margin: '0 0 4px 0' }}>Thank you for visiting Burger Hut!</p>
+                <p style={{ margin: '0' }}>Have a gourmet luxury day! 🍔❤️</p>
+              </div>
+            </div>
+
+            {/* Bottom Actions Row */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: 'var(--primary)',
+                    color: 'black',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.15em',
+                    fontSize: '0.8rem',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  🖨️ Print Bill (Thermal / PDF)
+                </button>
+
+                <button
+                  onClick={() => {
+                    const customer_phone = selectedBillOrder.customer_phone.replace(/\s+/g, '').replace(/^\+/, '');
+                    const formattedPhone = customer_phone.length === 10 ? `91${customer_phone}` : customer_phone;
+                    
+                    const itemsText = selectedBillOrder.items
+                      ? selectedBillOrder.items.map((item: any) => `- *${item.name}* (${item.quantity}x) - ₹${item.price * item.quantity}`).join('%0A')
+                      : '';
+                    
+                    const waText = `🍔 *BURGER HUT RECEIPT* 🍔%0A-------------------------%0A*Order ID:* ${selectedBillOrder.order_id}%0A*Date:* ${new Date(selectedBillOrder.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}%0A*Customer:* ${selectedBillOrder.customer_name}%0A%0A*Items List:*%0A${itemsText}%0A-------------------------%0A*Grand Total:* ₹${selectedBillOrder.total_amount}%0A%0A*Thank you for dining at Burger Hut!* 🍟❤️%0A📍 Mukta Prasad, Bikaner, Rajasthan%0A☎️ +91 63671 12075`;
+                    
+                    const waUrl = `https://wa.me/${formattedPhone}?text=${waText}`;
+                    window.open(waUrl, '_blank');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: '#25D366',
+                    color: 'white',
+                    fontWeight: 900,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.15em',
+                    fontSize: '0.8rem',
+                    border: 'none',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  💬 Send to WhatsApp
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <button
+                  onClick={() => {
+                    const itemsText = selectedBillOrder.items
+                      ? selectedBillOrder.items.map((item: any) => `- ${item.name} (${item.quantity}x) - ₹${item.price * item.quantity}`).join('\n')
+                      : '';
+                    const smsText = `🍔 BURGER HUT RECEIPT 🍔\n-------------------------\nOrder ID: ${selectedBillOrder.order_id}\nCustomer: ${selectedBillOrder.customer_name}\n\nItems:\n${itemsText}\n-------------------------\nGrand Total: ₹${selectedBillOrder.total_amount}\n\nThank you! Visit again. 📍 Bikaner Rajasthan`;
+                    
+                    navigator.clipboard.writeText(smsText);
+                    alert('📋 Bill details copied to clipboard successfully! You can now paste and send it via SMS, Email, or iMessage.');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.1em',
+                    fontSize: '0.75rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  📋 Copy Bill Text (SMS/Share)
+                </button>
+
+                <button
+                  onClick={() => setSelectedBillOrder(null)}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'transparent',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: '#999',
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

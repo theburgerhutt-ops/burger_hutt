@@ -88,7 +88,7 @@ const ReviewsSection = () => {
           setDbReviews(mapped);
         }
       } catch (err) {
-        console.error("Error loading approved reviews:", err);
+        console.warn("Unable to fetch reviews from Supabase, using premium mock fallback reviews.");
       }
     }
     loadApprovedReviews();

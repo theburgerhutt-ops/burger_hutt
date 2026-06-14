@@ -7,9 +7,10 @@ import Link from 'next/link';
 import Script from 'next/script';
 import styles from './Checkout.module.css';
 import { supabase } from '@/lib/supabase';
+import { getUser } from '@/app/actions/auth';
 
 const CheckoutPage = () => {
-  const { cart, totalPrice, clearCart } = useCart();
+  const { cart, totalPrice, originalPrice, activeOffer, clearCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -27,16 +28,24 @@ const CheckoutPage = () => {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setUser(session.user);
-        setFormData(prev => ({
-          ...prev,
-          name: session.user.user_metadata?.full_name || '',
-        }));
+    async function checkAuth() {
+      try {
+        const currentUser = await getUser();
+        if (currentUser) {
+          setUser(currentUser);
+          setFormData(prev => ({
+            ...prev,
+            name: currentUser.user_metadata?.full_name || '',
+          }));
+        }
+      } catch (err) {
+        console.error("Auth check failed", err);
+      } finally {
+        setCheckingAuth(false);
       }
-      setCheckingAuth(false);
-    });
+    }
+    
+    checkAuth();
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -454,7 +463,12 @@ const CheckoutPage = () => {
             <div className={styles.orderItems}>
               {cart.map(item => (
                 <div key={item.id} className={styles.itemRow}>
-                  <span className={styles.itemName}>{item.quantity}x {item.name}</span>
+                  <span className={styles.itemName}>
+                    {item.quantity}x {item.name}
+                    {item.subCategory && (
+                      <span style={{ color: 'var(--primary)', fontSize: '0.8rem', fontWeight: 600 }}> ({item.subCategory})</span>
+                    )}
+                  </span>
                   <span className={styles.itemTotal}>₹{item.price * item.quantity}</span>
                 </div>
               ))}
@@ -463,8 +477,16 @@ const CheckoutPage = () => {
             <div className={styles.totalsArea}>
               <div className={styles.totalRow}>
                 <span>Subtotal</span>
-                <span>₹{totalPrice}</span>
+                <span style={{ textDecoration: activeOffer?.active ? 'line-through' : 'none', opacity: activeOffer?.active ? 0.6 : 1 }}>
+                  ₹{originalPrice}
+                </span>
               </div>
+              {activeOffer?.active && (
+                <div className={styles.totalRow} style={{ color: '#D4A44B' }}>
+                  <span>Offer: {activeOffer.title}</span>
+                  <span>-₹{originalPrice - totalPrice}</span>
+                </div>
+              )}
               <div className={styles.totalRow}>
                 <span>Dining Style</span>
                 <span className="text-gold" style={{ textTransform: 'uppercase', fontWeight: 700 }}>

@@ -11,7 +11,7 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  const { cart, updateQuantity, removeFromCart, totalPrice, totalItems } = useCart();
+  const { cart, updateQuantity, removeFromCart, totalPrice, originalPrice, activeOffer, totalItems } = useCart();
 
   return (
     <AnimatePresence>
@@ -56,6 +56,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     </div>
                     <div className={styles.itemDetails}>
                       <h4>{item.name}</h4>
+                      {item.subCategory && (
+                        <span className={styles.itemSubCategory}>{item.subCategory}</span>
+                      )}
                       <p className={styles.itemPrice}>₹{item.price}</p>
                       <div className={styles.quantityControls}>
                         <button onClick={() => updateQuantity(item.id, -1)}><Minus size={16} /></button>
@@ -75,8 +78,16 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
               <div className={styles.footer}>
                 <div className={styles.summaryLine}>
                   <span>Subtotal</span>
-                  <span>₹{totalPrice}</span>
+                  <span style={{ textDecoration: activeOffer?.active ? 'line-through' : 'none', opacity: activeOffer?.active ? 0.6 : 1 }}>
+                    ₹{originalPrice}
+                  </span>
                 </div>
+                {activeOffer?.active && (
+                  <div className={styles.summaryLine} style={{ color: '#D4A44B' }}>
+                    <span>Offer ({activeOffer.discountPercentage}%)</span>
+                    <span>-₹{originalPrice - totalPrice}</span>
+                  </div>
+                )}
                 <div className={styles.summaryLine}>
                   <span>Delivery Fee</span>
                   <span className="text-gold">FREE</span>

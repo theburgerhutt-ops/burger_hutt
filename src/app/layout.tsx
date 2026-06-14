@@ -4,6 +4,7 @@ import "./globals.css";
 import Chatbot from "@/components/Chatbot";
 import GlobalBackground from "@/components/GlobalBackground";
 import { CartProvider } from "@/context/CartContext";
+import TopOfferBanner from "@/components/TopOfferBanner";
 
 const cinzel = Cinzel({
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -55,10 +56,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${cinzel.variable} ${poppins.variable} ${script.variable} ${cormorant.variable} ${playfair.variable}`}>
-      <body className={poppins.className}>
+    <html lang="en" suppressHydrationWarning className={`${cinzel.variable} ${poppins.variable} ${script.variable} ${cormorant.variable} ${playfair.variable}`}>
+      <body className={poppins.className} suppressHydrationWarning>
         <GlobalBackground />
         <CartProvider>
+          <TopOfferBanner />
           {children}
           <Chatbot />
         </CartProvider>

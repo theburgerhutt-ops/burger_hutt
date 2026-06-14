@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ShoppingBag, Clock, Heart, Calendar, ShieldCheck, User, Bell, Star, Upload, Trash2 } from 'lucide-react';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
+import { getUser } from '@/app/actions/auth';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -31,9 +32,9 @@ export default function ProfilePage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+        const currentUser = await getUser();
         
-        if (userError || !currentUser) {
+        if (!currentUser) {
           router.push('/login');
           return;
         }

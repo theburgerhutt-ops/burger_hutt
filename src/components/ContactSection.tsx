@@ -62,7 +62,7 @@ const ContactSection = () => {
               </div>
               <div className={styles.infoText}>
                 <h4>Reservation Line</h4>
-                <p>+91 98765 43210</p>
+                <p>+91 63671 12075</p>
               </div>
             </motion.div>
 
@@ -78,7 +78,7 @@ const ContactSection = () => {
               </div>
               <div className={styles.infoText}>
                 <h4>WhatsApp Us</h4>
-                <p>+91 98765 43210</p>
+                <p>+91 63671 12075</p>
               </div>
             </motion.div>
 

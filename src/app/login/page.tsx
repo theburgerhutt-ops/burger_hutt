@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, LogIn, ArrowRight } from 'lucide-react';
 import Header from '@/components/Header';
-import { supabase } from '@/lib/supabase';
+import { signIn } from '../actions/auth';
 
 function LoginForm() {
   const [error, setError] = useState<string | null>(null);
@@ -20,17 +20,12 @@ function LoginForm() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const result = await signIn(formData);
 
-      if (authError) {
-        setError(authError.message);
+      if (!result.success) {
+        setError(result.error || 'Invalid login credentials.');
         setLoading(false);
       } else {
         router.push(redirect);

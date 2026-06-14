@@ -92,7 +92,7 @@ export default function ContactPage() {
                 <div style={iconBoxStyle}><MapPin size={24} /></div>
                 <div>
                   <h4 style={infoTitleStyle}>Our Location</h4>
-                  <p style={infoTextStyle}>123 Gourmet Street, Foodie Valley, New Delhi</p>
+                  <p style={infoTextStyle}>Mukta Prasad, Bikaner, Rajasthan - 334004</p>
                 </div>
               </motion.div>
 
@@ -100,7 +100,7 @@ export default function ContactPage() {
                 <div style={iconBoxStyle}><Phone size={24} /></div>
                 <div>
                   <h4 style={infoTitleStyle}>Call Us</h4>
-                  <p style={infoTextStyle}>+91 98765 43210</p>
+                  <p style={infoTextStyle}>+91 63671 12075</p>
                 </div>
               </motion.div>
 

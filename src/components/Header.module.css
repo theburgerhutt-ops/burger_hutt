@@ -111,12 +111,36 @@
 }
 
 @media (max-width: 768px) {
-  .nav {
-    display: none;
-  }
-
   .mobileMenu {
     display: block;
+    cursor: pointer;
+  }
+
+  .nav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 70px;
+    left: -100%;
+    width: 250px;
+    height: calc(100vh - 70px);
+    background: rgba(18, 13, 11, 0.95);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(212, 164, 75, 0.15);
+    padding: 30px;
+    gap: 30px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 999;
+  }
+
+  .navOpen {
+    left: 0;
+  }
+
+  .nav a {
+    font-size: 1.1rem;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .header {

@@ -7,22 +7,26 @@ import CartDrawer from './CartDrawer';
 import styles from './Header.module.css';
 
 import { supabase } from '@/lib/supabase';
+import { getUser } from '@/app/actions/auth';
 
 const Header = () => {
   const { totalItems } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // 1. Fetch current session state
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    // Fetch current user including offline mock users
+    getUser().then(currentUser => {
+      setUser(currentUser);
     });
 
-    // 2. Add real-time event listener to update user state dynamically
+    // Fallback real-time event listener for actual Supabase auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+      }
     });
 
     const handleScroll = () => {
@@ -41,7 +45,7 @@ const Header = () => {
     <>
       <header className={`${styles.header} ${isScrolled ? styles.scrolled : ''}`}>
         <div className={`container ${styles.headerContainer}`}>
-          <div className={styles.mobileMenu}>
+          <div className={styles.mobileMenu} onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
             <Menu size={24} />
           </div>
 
@@ -49,11 +53,11 @@ const Header = () => {
             THE <span className="text-gold">BURGER</span> HUT
           </Link>
 
-          <nav className={styles.nav}>
-            <Link href="/">Home</Link>
-            <Link href="/menu">Menu</Link>
-            <Link href="/about">About</Link>
-            <Link href="/contact">Contact</Link>
+          <nav className={`${styles.nav} ${isMobileMenuOpen ? styles.navOpen : ''}`}>
+            <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+            <Link href="/menu" onClick={() => setIsMobileMenuOpen(false)}>Menu</Link>
+            <Link href="/about" onClick={() => setIsMobileMenuOpen(false)}>About</Link>
+            <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)}>Contact</Link>
           </nav>
 
           <div className={styles.actions}>
