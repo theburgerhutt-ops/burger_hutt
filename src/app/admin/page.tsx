@@ -1262,13 +1262,13 @@ export default function AdminDashboard() {
                           <tr key={m.id}>
                             <td>
                               <div className="font-bold text-white">{m.name}</div>
-                              <div className="flex gap-1 mt-1">
-                                {m.tags.map((tag: string) => (
-                                  <span key={tag} className="text-[8px] bg-gold/10 text-gold border border-gold/20 px-1.5 py-0.5 rounded font-bold uppercase">
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
+                                <div className="flex gap-1 mt-1">
+                                  {m.tags?.map((tag: string) => (
+                                    <span key={tag} className="text-[8px] bg-gold/10 text-gold border border-gold/20 px-1.5 py-0.5 rounded font-bold uppercase">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
                             </td>
                             <td className="text-xs uppercase text-gold/80 font-bold">{m.category}</td>
                             <td className="font-black text-gold">₹{m.price}</td>
