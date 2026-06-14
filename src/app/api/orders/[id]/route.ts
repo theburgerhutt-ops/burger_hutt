@@ -14,6 +14,9 @@ const getLocalOrders = (): any[] => {
   } catch (e) {
     console.error("Error reading local orders file:", e);
   }
+  return [];
+};
+
 const saveLocalOrders = (orders: any[]) => {
   try {
     const dir = path.dirname(LOCAL_ORDERS_FILE);
