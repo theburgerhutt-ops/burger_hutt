@@ -11,6 +11,7 @@ import {
   RefreshCw, 
   Plus, 
   Trash2, 
+  Edit2,
   Check, 
   Star, 
   Tag, 
@@ -104,12 +105,15 @@ export default function AdminDashboard() {
   // 2. Menu Items Data State (initialized clean)
   const [menuItems, setMenuItems] = useState<any[]>(menuData);
 
+  const [editingMenuItemId, setEditingMenuItemId] = useState<string | null>(null);
+
   // New Menu Item Form State
   const [newItem, setNewItem] = useState({
     name: '',
     category: 'burgers',
     price: '',
     description: '',
+    image: '',
     isSpicy: false,
     isVeg: false,
     isBestseller: false
@@ -523,7 +527,7 @@ export default function AdminDashboard() {
   };
 
   // 2. Menu Item Form Submission
-  const handleAddMenuItem = (e: React.FormEvent) => {
+  const handleMenuSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItem.name || !newItem.price) {
       alert('Please fill out the name and price!');
@@ -534,27 +538,52 @@ export default function AdminDashboard() {
     if (newItem.isSpicy) tags.push('spicy');
     if (newItem.isBestseller) tags.push('bestseller');
 
-    const added = {
-      id: `m-${Date.now()}`,
-      name: newItem.name,
-      category: newItem.category,
-      price: parseFloat(newItem.price),
-      rating: 5,
-      tags,
-      description: newItem.description || 'Gourmet organic ingredients freshly made to order.'
-    };
+    if (editingMenuItemId) {
+      setMenuItems(menuItems.map(m => m.id === editingMenuItemId ? {
+        ...m,
+        name: newItem.name,
+        category: newItem.category,
+        price: parseFloat(newItem.price),
+        description: newItem.description,
+        image: newItem.image || m.image,
+        isVeg: newItem.isVeg,
+        tags
+      } : m));
+      setEditingMenuItemId(null);
+    } else {
+      const added = {
+        id: `m-${Date.now()}`,
+        name: newItem.name,
+        category: newItem.category,
+        price: parseFloat(newItem.price),
+        rating: 5,
+        tags,
+        image: newItem.image || 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=600',
+        isVeg: newItem.isVeg,
+        description: newItem.description || 'Gourmet organic ingredients freshly made to order.'
+      };
+      setMenuItems([...menuItems, added]);
+    }
+    setNewItem({ name: '', category: 'burgers', price: '', description: '', image: '', isSpicy: false, isVeg: false, isBestseller: false });
+  };
 
-    setMenuItems([...menuItems, added]);
+  const handleEditClick = (m: any) => {
+    setEditingMenuItemId(m.id);
     setNewItem({
-      name: '',
-      category: 'burgers',
-      price: '',
-      description: '',
-      isSpicy: false,
-      isVeg: false,
-      isBestseller: false
+      name: m.name,
+      category: m.category,
+      price: m.price.toString(),
+      description: m.description || '',
+      image: m.image || '',
+      isSpicy: m.tags?.includes('spicy') || false,
+      isVeg: m.isVeg || false,
+      isBestseller: m.tags?.includes('bestseller') || false
     });
-    alert('Menu item added successfully!');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMenuItemId(null);
+    setNewItem({ name: '', category: 'burgers', price: '', description: '', image: '', isSpicy: false, isVeg: false, isBestseller: false });
   };
 
   const handleDeleteMenuItem = (id: string) => {
@@ -1274,12 +1303,21 @@ export default function AdminDashboard() {
                             <td className="font-black text-gold">₹{m.price}</td>
                             <td className="text-xs opacity-60 max-w-[200px] truncate">{m.description}</td>
                             <td>
-                              <button 
-                                onClick={() => handleDeleteMenuItem(m.id)}
-                                className={styles.deleteBtn}
-                              >
-                                <Trash2 size={12} />
-                              </button>
+                              <div className="flex gap-2">
+                                <button 
+                                  onClick={() => handleEditClick(m)}
+                                  className={styles.editBtn}
+                                  style={{ background: 'rgba(212, 164, 75, 0.1)', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteMenuItem(m.id)}
+                                  className={styles.deleteBtn}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1288,10 +1326,10 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Add New Burger Form */}
+                {/* Add/Edit Burger Form */}
                 <div className={styles.card}>
-                  <h3>Add <span>Gourmet Item</span></h3>
-                  <form onSubmit={handleAddMenuItem}>
+                  <h3>{editingMenuItemId ? 'Edit' : 'Add'} <span>Gourmet Item</span></h3>
+                  <form onSubmit={handleMenuSubmit}>
                     <div className={styles.formGroup}>
                       <label>Item Name</label>
                       <input 
@@ -1313,6 +1351,9 @@ export default function AdminDashboard() {
                           <option value="burgers">Burgers</option>
                           <option value="sides">Sides</option>
                           <option value="drinks">Drinks</option>
+                          <option value="pizza">Pizza</option>
+                          <option value="pasta">Pasta</option>
+                          <option value="shakes">Shakes</option>
                         </select>
                       </div>
                       <div className={styles.formGroup}>
@@ -1325,6 +1366,16 @@ export default function AdminDashboard() {
                           required
                         />
                       </div>
+                    </div>
+
+                    <div className={styles.formGroup + " mt-4"}>
+                      <label>Image URL / Path</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. /menu/burger.png or https://..." 
+                        value={newItem.image || ''}
+                        onChange={(e) => setNewItem({ ...newItem, image: e.target.value })}
+                      />
                     </div>
 
                     <div className={styles.formGroup + " mt-4"}>
@@ -1364,9 +1415,16 @@ export default function AdminDashboard() {
                       </label>
                     </div>
 
-                    <button type="submit" className={styles.submitBtn}>
-                      <Plus size={16} /> Add To Catalog
-                    </button>
+                    <div className="flex gap-4">
+                      <button type="submit" className={styles.submitBtn}>
+                        {editingMenuItemId ? <Check size={16} /> : <Plus size={16} />} {editingMenuItemId ? 'Save Changes' : 'Add To Catalog'}
+                      </button>
+                      {editingMenuItemId && (
+                        <button type="button" onClick={handleCancelEdit} className={styles.submitBtn} style={{ background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)' }}>
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </form>
                 </div>
               </div>
