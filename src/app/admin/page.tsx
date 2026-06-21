@@ -19,7 +19,8 @@ import {
   DollarSign, 
   Bell, 
   X,
-  Download 
+  Download,
+  Mail 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { menuData } from '@/data/menu';
@@ -79,11 +80,59 @@ const defaultMockOrders = [
   }
 ];
 
+const defaultMockStaff = [
+  { id: 's-1', name: 'Chef Rajesh Kumar', role: 'Head Chef Specialist', contact: '+91 63671 12075', status: 'active' },
+  { id: 's-2', name: 'Aman Bikaner', role: 'Rider Courier Specialist', contact: '+91 99887 76655', status: 'active' },
+  { id: 's-3', name: 'Priya Sharma', role: 'Cashier Counter Specialist', contact: '+91 98765 43210', status: 'on_break' }
+];
+
+const defaultMockGallery = [
+  { id: 'g-1', title: 'Signature Double Truffle', category: 'Signature Dishes', url: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=600' },
+  { id: 'g-2', title: 'Luxury Gold Leaf Burger', category: 'Signature Dishes', url: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&q=80&w=600' },
+  { id: 'g-3', title: 'Artisan Hazelnut Shake', category: 'Signature Dishes', url: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&q=80&w=600' }
+];
+
+const defaultMockReviews = [
+  { id: 'r-1', name: 'Rahul Malhotra', rating: 5, text: 'The 24K Gold luxury burger is an absolute masterpiece! Tastes premium and lives up to the name.', approved: true, created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
+  { id: 'r-2', name: 'Sneha Verma', rating: 4, text: 'Loved the shakes! Great ambience, clean presentation. Highly recommend.', approved: true, created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() }
+];
+
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'inventory' | 'staff' | 'gallery' | 'offers' | 'reviews' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'inventory' | 'staff' | 'gallery' | 'offers' | 'reviews' | 'messages' | 'settings'>('dashboard');
+  const [messages, setMessages] = useState<any[]>([]);
   const [toast, setToast] = useState<{ id: string; title: string; body: string; time: string } | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
   const [selectedBillOrder, setSelectedBillOrder] = useState<any | null>(null);
+
+  // Admin authentication states
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [authError, setAuthError] = useState(false);
+
+  useEffect(() => {
+    // Check session on mount
+    if (sessionStorage.getItem('tbh_admin_authenticated') === 'true') {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const savedPassword = localStorage.getItem('tbh_admin_password') || 'admin123';
+    if (passwordInput === savedPassword) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('tbh_admin_authenticated', 'true');
+      setAuthError(false);
+    } else {
+      setAuthError(true);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('tbh_admin_authenticated');
+    setPasswordInput('');
+  };
 
   // Stats State
   const [stats, setStats] = useState({
@@ -202,10 +251,42 @@ export default function AdminDashboard() {
       return;
     }
 
-    try {
-      const generatedOrderId = `TBH-WI-${Math.floor(1000 + Math.random() * 9000)}`;
-      const totalAmount = walkInCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const generatedOrderId = `TBH-WI-${Math.floor(1000 + Math.random() * 9000)}`;
+    const totalAmount = walkInCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const orderObj = {
+      id: `wi-${Date.now()}`,
+      order_id: generatedOrderId,
+      customer_name: walkInCustomer.name || 'Walk-in Guest',
+      customer_phone: walkInCustomer.phone || '0000000000',
+      customer_address: walkInCustomer.address || 'Dine-In',
+      items: walkInCart,
+      total_amount: totalAmount,
+      status: walkInCustomer.status,
+      created_at: new Date().toISOString(),
+      payment_method: walkInCustomer.paymentMethod,
+      payment_status: walkInCustomer.paymentStatus,
+      screenshot_url: null
+    };
 
+    // Optimistically update locally
+    const updatedOrders = [orderObj, ...orders];
+    setOrders(updatedOrders);
+    localStorage.setItem('tbh_local_orders', JSON.stringify(updatedOrders));
+    recalculateStats(updatedOrders);
+    playNotificationSound();
+
+    setWalkInCart([]);
+    setWalkInCustomer({
+      name: 'Walk-in Guest',
+      phone: '',
+      address: 'Dine-In',
+      paymentMethod: 'Cash',
+      paymentStatus: 'paid',
+      status: 'preparing'
+    });
+    setShowWalkInModal(false);
+
+    try {
       const { data, error } = await supabase
         .from('orders')
         .insert([
@@ -229,42 +310,31 @@ export default function AdminDashboard() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const newOrder = data[0];
-        const mappedNew = {
-          id: newOrder.id,
-          order_id: newOrder.order_id,
-          customer_name: newOrder.customer_name,
-          customer_phone: newOrder.customer_phone,
-          customer_address: newOrder.customer_address,
-          items: typeof newOrder.items === 'string' ? JSON.parse(newOrder.items) : newOrder.items,
-          total_amount: newOrder.total_amount,
-          payment_method: newOrder.payment_method,
-          payment_status: newOrder.payment_status || 'paid',
-          status: newOrder.status,
-          created_at: newOrder.created_at,
-          screenshot_url: newOrder.screenshot_url
+        const dbOrder = data[0];
+        const mapped = {
+          id: dbOrder.id,
+          order_id: dbOrder.order_id,
+          customer_name: dbOrder.customer_name,
+          customer_phone: dbOrder.customer_phone,
+          customer_address: dbOrder.customer_address,
+          items: typeof dbOrder.items === 'string' ? JSON.parse(dbOrder.items) : dbOrder.items,
+          total_amount: dbOrder.total_amount,
+          payment_method: dbOrder.payment_method,
+          payment_status: dbOrder.payment_status || 'paid',
+          status: dbOrder.status,
+          created_at: dbOrder.created_at,
+          screenshot_url: dbOrder.screenshot_url
         };
-
-        const updatedOrders = [mappedNew, ...orders];
-        setOrders(updatedOrders);
-        recalculateStats(updatedOrders);
-        playNotificationSound();
-
-        setWalkInCart([]);
-        setWalkInCustomer({
-          name: 'Walk-in Guest',
-          phone: '',
-          address: 'Dine-In',
-          paymentMethod: 'Cash',
-          paymentStatus: 'paid',
-          status: 'preparing'
+        setOrders(prev => {
+          const filtered = prev.map(o => o.id === orderObj.id ? mapped : o);
+          localStorage.setItem('tbh_local_orders', JSON.stringify(filtered));
+          return filtered;
         });
-        setShowWalkInModal(false);
-        alert(`🎉 Walk-in order placed successfully! Order ID: ${generatedOrderId}`);
       }
+      alert(`🎉 Walk-in order placed successfully! Order ID: ${generatedOrderId}`);
     } catch (err: any) {
-      console.error('Error placing walk-in order:', err);
-      alert(`Failed to save walk-in order: ${err.message || err}`);
+      console.warn('Supabase save failed for walk-in order, saved locally instead:', err);
+      alert(`🎉 Walk-in order placed successfully (offline mode)! Order ID: ${generatedOrderId}`);
     }
   };
 
@@ -316,6 +386,7 @@ export default function AdminDashboard() {
           if (isInitial) {
             knownOrderIds = new Set(mappedOrders.map((o: any) => o.id));
             setOrders(mappedOrders);
+            localStorage.setItem('tbh_local_orders', JSON.stringify(mappedOrders));
             recalculateStats(mappedOrders);
           } else {
             const newOrders = mappedOrders.filter((o: any) => !knownOrderIds.has(o.id));
@@ -331,11 +402,18 @@ export default function AdminDashboard() {
             }
             // Always update state in case statuses changed
             setOrders(mappedOrders);
+            localStorage.setItem('tbh_local_orders', JSON.stringify(mappedOrders));
             recalculateStats(mappedOrders);
           }
         }
       } catch (err) {
         console.warn('Unable to load orders from API. Falling back to local offline queue.');
+        const local = localStorage.getItem('tbh_local_orders');
+        if (local) {
+          const parsed = JSON.parse(local);
+          setOrders(parsed);
+          recalculateStats(parsed);
+        }
       }
     };
 
@@ -347,16 +425,22 @@ export default function AdminDashboard() {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        if (data) {
+        if (data && data.length > 0) {
           setReviews(data);
+          localStorage.setItem('tbh_reviews', JSON.stringify(data));
         }
       } catch (err) {
         console.warn('Unable to load admin reviews from Supabase database. Falling back to local feedback streams.');
+        const local = localStorage.getItem('tbh_reviews');
+        if (local) {
+          setReviews(JSON.parse(local));
+        }
       }
     };
 
     fetchOrders(true);
     fetchReviews();
+    fetchMessages();
 
     // Set up Socket.io client
     const socket = io(); // Connects to current host
@@ -383,6 +467,7 @@ export default function AdminDashboard() {
       
       setOrders(prev => {
         const updated = [mappedNew, ...prev];
+        localStorage.setItem('tbh_local_orders', JSON.stringify(updated));
         recalculateStats(updated);
         return updated;
       });
@@ -411,6 +496,36 @@ export default function AdminDashboard() {
       ];
       setPurchaseLogs(defaultLogs);
       localStorage.setItem('tbh_purchase_logs', JSON.stringify(defaultLogs));
+    }
+
+    // Load local menu items, staff list, gallery showcase, and customer reviews
+    const savedMenu = localStorage.getItem('tbh_menu_items');
+    if (savedMenu) {
+      setMenuItems(JSON.parse(savedMenu));
+    }
+
+    const savedStaff = localStorage.getItem('tbh_staff');
+    if (savedStaff) {
+      setStaff(JSON.parse(savedStaff));
+    } else {
+      setStaff(defaultMockStaff);
+      localStorage.setItem('tbh_staff', JSON.stringify(defaultMockStaff));
+    }
+
+    const savedGallery = localStorage.getItem('tbh_gallery');
+    if (savedGallery) {
+      setGallery(JSON.parse(savedGallery));
+    } else {
+      setGallery(defaultMockGallery);
+      localStorage.setItem('tbh_gallery', JSON.stringify(defaultMockGallery));
+    }
+
+    const savedReviews = localStorage.getItem('tbh_reviews');
+    if (savedReviews) {
+      setReviews(JSON.parse(savedReviews));
+    } else {
+      setReviews(defaultMockReviews);
+      localStorage.setItem('tbh_reviews', JSON.stringify(defaultMockReviews));
     }
 
 
@@ -470,6 +585,20 @@ export default function AdminDashboard() {
 
   // 1. Orders Actions
   const handleStatusChange = async (id: string, newStatus: string) => {
+    const updated = orders.map(o => {
+      if (o.id === id) {
+        return { 
+          ...o, 
+          status: newStatus,
+          payment_status: newStatus === 'delivered' ? 'paid' : o.payment_status
+        };
+      }
+      return o;
+    });
+    setOrders(updated);
+    localStorage.setItem('tbh_local_orders', JSON.stringify(updated));
+    recalculateStats(updated);
+
     try {
       const updates = { 
         status: newStatus,
@@ -483,26 +612,22 @@ export default function AdminDashboard() {
       });
       
       if (!res.ok) throw new Error('Failed API request');
-
-      const updated = orders.map(o => {
-        if (o.id === id) {
-          return { 
-            ...o, 
-            status: newStatus,
-            payment_status: newStatus === 'delivered' ? 'paid' : o.payment_status
-          };
-        }
-        return o;
-      });
-      setOrders(updated);
-      recalculateStats(updated);
     } catch (err) {
-      console.error('Error changing order status:', err);
-      alert('Failed to update status in database.');
+      console.warn('Backend update failed, status updated locally in browser storage:', err);
     }
   };
 
   const handleVerifyPayment = async (id: string) => {
+    const updated = orders.map(o => {
+      if (o.id === id) {
+        return { ...o, payment_status: 'paid', status: 'preparing' };
+      }
+      return o;
+    });
+    setOrders(updated);
+    localStorage.setItem('tbh_local_orders', JSON.stringify(updated));
+    recalculateStats(updated);
+
     try {
       const res = await fetch(`/api/orders/${id}`, {
         method: 'PATCH',
@@ -511,21 +636,13 @@ export default function AdminDashboard() {
       });
 
       if (!res.ok) throw new Error('Failed API request');
-
-      const updated = orders.map(o => {
-        if (o.id === id) {
-          return { ...o, payment_status: 'paid', status: 'preparing' };
-        }
-        return o;
-      });
-      setOrders(updated);
-      recalculateStats(updated);
       alert('Payment verified manually! Credited to cafe wallet and order status moved to Preparing.');
     } catch (err) {
-      console.error('Error verifying payment:', err);
-      alert('Failed to verify payment in database.');
+      console.warn('Backend verification failed, payment verified locally in browser storage:', err);
+      alert('Payment verified manually (offline)! Credited locally.');
     }
   };
+
 
   // 2. Menu Item Form Submission
   const handleMenuSubmit = (e: React.FormEvent) => {
@@ -539,8 +656,9 @@ export default function AdminDashboard() {
     if (newItem.isSpicy) tags.push('spicy');
     if (newItem.isBestseller) tags.push('bestseller');
 
+    let updatedMenu = [...menuItems];
     if (editingMenuItemId) {
-      setMenuItems(menuItems.map(m => m.id === editingMenuItemId ? {
+      updatedMenu = menuItems.map(m => m.id === editingMenuItemId ? {
         ...m,
         name: newItem.name,
         category: newItem.category,
@@ -549,7 +667,7 @@ export default function AdminDashboard() {
         image: newItem.image || m.image,
         isVeg: newItem.isVeg,
         tags
-      } : m));
+      } : m);
       setEditingMenuItemId(null);
     } else {
       const added = {
@@ -563,8 +681,10 @@ export default function AdminDashboard() {
         isVeg: newItem.isVeg,
         description: newItem.description || 'Gourmet organic ingredients freshly made to order.'
       };
-      setMenuItems([...menuItems, added]);
+      updatedMenu = [...menuItems, added];
     }
+    setMenuItems(updatedMenu);
+    localStorage.setItem('tbh_menu_items', JSON.stringify(updatedMenu));
     setNewItem({ name: '', category: 'burgers', price: '', description: '', image: '', isSpicy: false, isVeg: false, isBestseller: false });
   };
 
@@ -613,7 +733,9 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteMenuItem = (id: string) => {
-    setMenuItems(menuItems.filter(m => m.id !== id));
+    const updatedMenu = menuItems.filter(m => m.id !== id);
+    setMenuItems(updatedMenu);
+    localStorage.setItem('tbh_menu_items', JSON.stringify(updatedMenu));
   };
 
   // Helper methods to save to state and localStorage
@@ -740,30 +862,36 @@ export default function AdminDashboard() {
   const handleAddStaff = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaff.name || !newStaff.contact) return;
-    setStaff([...staff, {
+    const updated = [...staff, {
       id: `s-${Date.now()}`,
       name: newStaff.name,
       role: `${newStaff.role} Specialist`,
       contact: newStaff.contact,
       status: 'active'
-    }]);
+    }];
+    setStaff(updated);
+    localStorage.setItem('tbh_staff', JSON.stringify(updated));
     setNewStaff({ name: '', role: 'Chef', contact: '' });
   };
 
   const handleFireStaff = (id: string) => {
-    setStaff(staff.filter(s => s.id !== id));
+    const updated = staff.filter(s => s.id !== id);
+    setStaff(updated);
+    localStorage.setItem('tbh_staff', JSON.stringify(updated));
   };
 
   // 5. Gallery Actions
   const handleAddGallery = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newGalleryUrl || !newGalleryTitle) return;
-    setGallery([...gallery, {
+    const updated = [...gallery, {
       id: `g-${Date.now()}`,
       title: newGalleryTitle,
       category: 'Signature Dishes',
       url: newGalleryUrl
-    }]);
+    }];
+    setGallery(updated);
+    localStorage.setItem('tbh_gallery', JSON.stringify(updated));
     setNewGalleryUrl('');
     setNewGalleryTitle('');
   };
@@ -810,6 +938,10 @@ export default function AdminDashboard() {
 
   // 7. Reviews Actions
   const toggleReviewApproval = async (id: string, currentApproved: boolean) => {
+    const updated = reviews.map(r => r.id === id ? { ...r, approved: !r.approved } : r);
+    setReviews(updated);
+    localStorage.setItem('tbh_reviews', JSON.stringify(updated));
+
     try {
       const { error } = await supabase
         .from('reviews')
@@ -817,16 +949,17 @@ export default function AdminDashboard() {
         .eq('id', id);
 
       if (error) throw error;
-
-      setReviews(reviews.map(r => r.id === id ? { ...r, approved: !r.approved } : r));
     } catch (err) {
-      console.error('Error toggling review status:', err);
-      alert('Failed to update review status in database.');
+      console.warn('Backend review approval toggle failed, persisted locally in browser storage:', err);
     }
   };
 
   const handleDeleteReview = async (id: string) => {
     if (!confirm('Are you sure you want to permanently delete this review from feedback stream?')) return;
+    const updated = reviews.filter(r => r.id !== id);
+    setReviews(updated);
+    localStorage.setItem('tbh_reviews', JSON.stringify(updated));
+
     try {
       const { error } = await supabase
         .from('reviews')
@@ -834,14 +967,95 @@ export default function AdminDashboard() {
         .eq('id', id);
 
       if (error) throw error;
-
-      setReviews(reviews.filter(r => r.id !== id));
       alert('Review permanently deleted from feedback stream.');
     } catch (err) {
-      console.error('Error deleting review:', err);
-      alert('Failed to delete review.');
+      console.warn('Backend review delete failed, persisted locally in browser storage:', err);
+      alert('Review permanently deleted locally.');
     }
   };
+
+
+
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch('/api/messages');
+      if (!res.ok) throw new Error('Failed to fetch messages');
+      const data = await res.json();
+      setMessages(data);
+      localStorage.setItem('tbh_local_messages', JSON.stringify(data));
+    } catch (err) {
+      console.error('Failed to fetch messages:', err);
+      const local = localStorage.getItem('tbh_local_messages');
+      if (local) {
+        setMessages(JSON.parse(local));
+      }
+    }
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this message?')) return;
+    
+    const updatedMessages = messages.filter(m => m.id !== id);
+    setMessages(updatedMessages);
+    localStorage.setItem('tbh_local_messages', JSON.stringify(updatedMessages));
+
+    try {
+      const res = await fetch(`/api/messages/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        alert('Message deleted successfully.');
+      } else {
+        console.warn('API delete failed, message deleted locally.');
+      }
+    } catch (err) {
+      console.warn('API delete failed, message deleted locally:', err);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container">
+        <div className={styles.adminPage}>
+          <div className={styles.loginContainer}>
+            <div className={styles.loginCard}>
+              <div className={styles.loginHeader}>
+                <h2>Burger<span>Hut</span> Console</h2>
+                <div className={styles.loginSubtitle}>
+                  Authorized Access Only
+                </div>
+              </div>
+              
+              <form onSubmit={handleLogin}>
+                <div className={styles.formGroup} style={{ marginBottom: '20px' }}>
+                  <label htmlFor="adminPassword">Console Passcode</label>
+                  <input 
+                    type="password" 
+                    id="adminPassword"
+                    placeholder="Enter admin passcode" 
+                    value={passwordInput}
+                    onChange={(e) => setPasswordInput(e.target.value)}
+                    required
+                    style={{ textAlign: 'center', letterSpacing: '0.1em' }}
+                  />
+                </div>
+                
+                {authError && (
+                  <div className={styles.errorMessage}>
+                    ⚠️ Access Denied: Incorrect passcode.
+                  </div>
+                )}
+                
+                <button type="submit" className={styles.submitBtn}>
+                  Verify & Enter
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container">
@@ -904,6 +1118,12 @@ export default function AdminDashboard() {
                 <Star size={18} /> Cust Reviews
               </div>
               <div 
+                className={`${styles.navItem} ${activeTab === 'messages' ? styles.active : ''}`}
+                onClick={() => setActiveTab('messages')}
+              >
+                <Mail size={18} /> Inbox & Messages
+              </div>
+              <div 
                 className={`${styles.navItem} ${activeTab === 'settings' ? styles.active : ''}`}
                 onClick={() => setActiveTab('settings')}
               >
@@ -911,10 +1131,22 @@ export default function AdminDashboard() {
               </div>
             </nav>
 
-            <div className={styles.sidebarFooter}>
+            <div className={styles.sidebarFooter} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <a href="/" target="_blank" className={styles.viewWebsiteBtn}>
                 View Live Site
               </a>
+              <button 
+                onClick={handleLogout} 
+                className={styles.viewWebsiteBtn}
+                style={{ 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  borderColor: 'rgba(239, 68, 68, 0.3)', 
+                  color: '#ef4444',
+                  cursor: 'pointer'
+                }}
+              >
+                Logout
+              </button>
             </div>
           </aside>
 
@@ -1036,7 +1268,7 @@ export default function AdminDashboard() {
                 {/* Dashboard Orders live-manager control center */}
                 <div className={styles.card}>
                   <h3>Active <span>Incoming Queues & Live Verification</span></h3>
-                  <div className={styles.tableWrapper}>
+                  <div className={`${styles.tableWrapper} custom-scrollbar`} style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                     <table className={styles.ordersTable}>
                       <thead>
                         <tr>
@@ -1181,7 +1413,7 @@ export default function AdminDashboard() {
                     <Plus size={14} /> Add Walk-in Order
                   </button>
                 </div>
-                <div className={styles.tableWrapper}>
+                <div className={`${styles.tableWrapper} custom-scrollbar`} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                   <table className={styles.ordersTable}>
                     <thead>
                       <tr>
@@ -1716,7 +1948,11 @@ export default function AdminDashboard() {
                           <span className={styles.galleryTag}>{g.category}</span>
                         </div>
                         <button 
-                          onClick={() => setGallery(gallery.filter(item => item.id !== g.id))}
+                          onClick={() => {
+                            const updated = gallery.filter(item => item.id !== g.id);
+                            setGallery(updated);
+                            localStorage.setItem('tbh_gallery', JSON.stringify(updated));
+                          }}
                           className={styles.deleteBtn}
                         >
                           <Trash2 size={12} />
@@ -1956,9 +2192,84 @@ export default function AdminDashboard() {
               </div>
             )}
 
+            {/* 8b. Messages Tab View */}
+            {activeTab === 'messages' && (
+              <div className={styles.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '15px' }}>
+                  <h3 style={{ margin: 0 }}>Customer <span>Inquiries & Messages</span></h3>
+                  <button 
+                    onClick={fetchMessages}
+                    className="btn-primary"
+                    style={{ animation: 'none', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', letterSpacing: '0.1em' }}
+                  >
+                    <RefreshCw size={14} /> REFRESH
+                  </button>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {messages.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px dashed var(--border)' }}>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>No customer messages received yet.</p>
+                    </div>
+                  ) : (
+                    messages.map((msg: any) => (
+                      <div 
+                        key={msg.id} 
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid var(--border)',
+                          padding: '20px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+                          <div>
+                            <h4 style={{ color: '#fff', fontSize: '1.2rem', margin: '0 0 5px 0', fontFamily: 'var(--font-cormorant)' }}>
+                              {msg.subject || 'No Subject'}
+                            </h4>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+                              From: <span style={{ color: '#fff' }}>{msg.name}</span> &lt;{msg.email}&gt;
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                            {new Date(msg.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p style={{ 
+                          color: '#fff', 
+                          opacity: 0.9, 
+                          fontSize: '0.9rem', 
+                          margin: 0, 
+                          lineHeight: 1.6, 
+                          background: 'rgba(0,0,0,0.3)', 
+                          padding: '15px', 
+                          borderLeft: '3px solid var(--primary)',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {msg.message}
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '10px' }}>
+                          <button 
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className={styles.deleteBtn}
+                            style={{ position: 'relative', top: 'auto', right: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#ef4444', background: 'rgba(239, 68, 68, 0.05)', padding: '6px 12px', border: '1px solid rgba(239, 68, 68, 0.15)', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' }}
+                          >
+                            <Trash2 size={12} /> DELETE MESSAGE
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 9. Settings Tab View */}
             {activeTab === 'settings' && (
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
                 <div className={styles.card}>
                   <h3>Cafe Parameter <span>Configuration</span></h3>
                   <div className="space-y-4">
@@ -2006,6 +2317,36 @@ export default function AdminDashboard() {
                       className={styles.submitBtn}
                     >
                       Save Financial Parameters
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.card}>
+                  <h3>Security & <span>Passcode</span></h3>
+                  <div className="space-y-4">
+                    <div className={styles.formGroup}>
+                      <label>Update Admin Passcode</label>
+                      <input 
+                        type="password" 
+                        id="newAdminPasswordInput" 
+                        placeholder="Enter new passcode"
+                        style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(212, 164, 75, 0.2)', color: 'white', padding: '10px', borderRadius: '8px', width: '100%' }}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => {
+                        const inputEl = document.getElementById('newAdminPasswordInput') as HTMLInputElement;
+                        if (inputEl && inputEl.value.trim()) {
+                          localStorage.setItem('tbh_admin_password', inputEl.value.trim());
+                          alert('🔑 Passcode updated successfully! Use your new passcode for next logins.');
+                          inputEl.value = '';
+                        } else {
+                          alert('Please enter a valid passcode!');
+                        }
+                      }} 
+                      className={styles.submitBtn}
+                    >
+                      Update Passcode
                     </button>
                   </div>
                 </div>

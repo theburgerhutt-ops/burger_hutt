@@ -181,9 +181,134 @@
 @media (max-width: 1024px) {
   .checkoutGrid {
     grid-template-columns: 1fr;
+    gap: 30px;
   }
   
   .summaryCard {
     position: static;
   }
+}
+
+@media (max-width: 768px) {
+  .checkoutPage {
+    padding: 100px 0 60px 0;
+  }
+  
+  .sectionTitle {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+  
+  .formCard {
+    padding: 20px;
+    border-radius: 16px;
+  }
+  
+  .summaryCard {
+    padding: 20px;
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .checkoutPage {
+    padding: 90px 0 40px 0;
+  }
+  
+  .sectionTitle {
+    font-size: 1.6rem;
+    gap: 10px;
+  }
+  
+  .formCard {
+    padding: 15px;
+  }
+  
+  .summaryCard {
+    padding: 15px;
+  }
+  
+  .placeOrderBtn {
+    padding: 15px;
+    font-size: 0.9rem;
+  }
+  
+  .diningTabs {
+    gap: 8px !important;
+    margin-bottom: 25px !important;
+  }
+  
+  .diningTabBtn {
+    padding: 12px 6px !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.05em !important;
+  }
+  
+  .paymentTriggerBtn {
+    padding: 12px !important;
+    font-size: 0.75rem !important;
+  }
+  
+  .qrDetailsCard {
+    padding: 15px 10px !important;
+  }
+  
+  .qrContainer {
+    width: 160px !important;
+    height: 160px !important;
+  }
+}
+
+/* Custom classes for inline styles to ensure responsiveness */
+.diningTabs {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 35px;
+}
+
+.diningTabBtn {
+  flex: 1;
+  padding: 16px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.paymentTriggerBtn {
+  width: 100%;
+  padding: 16px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justifyContent: center;
+  gap: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.qrDetailsCard {
+  border: 1px solid rgba(212, 164, 75, 0.2);
+  background: rgba(18, 13, 11, 0.6);
+  padding: 25px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.qrContainer {
+  width: 200px;
+  height: 200px;
+  background: white;
+  margin: 0 auto 20px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justifyContent: center;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+  border-radius: 8px;
 }

@@ -970,3 +970,62 @@
   font-size: 0.8rem;
   color: var(--text-muted);
 }
+
+/* Login Page Styles */
+.loginContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 20px;
+}
+
+.loginCard {
+  background: rgba(18, 13, 11, 0.8);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(212, 164, 75, 0.25);
+  border-radius: 30px;
+  padding: 50px 40px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(212, 164, 75, 0.05);
+  text-align: center;
+  position: relative;
+}
+
+.loginHeader {
+  margin-bottom: 35px;
+}
+
+.loginHeader h2 {
+  font-family: var(--font-cormorant), serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.loginHeader h2 span {
+  color: var(--primary);
+  font-style: italic;
+}
+
+.loginSubtitle {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  margin-top: 10px;
+}
+
+.errorMessage {
+  color: #FF5630;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 15px;
+  background: rgba(255, 86, 48, 0.1);
+  padding: 10px;
+  border: 1px solid rgba(255, 86, 48, 0.2);
+  border-radius: 10px;
+}

@@ -1,0 +1,18 @@
+[
+  {
+    "id": "msg-1782043955453-356",
+    "name": "Test Customer",
+    "email": "customer@test.com",
+    "subject": "Delicious Burgers Query",
+    "message": "This is a test message to verify the contact-to-admin integration.",
+    "created_at": "2026-06-21T12:12:35.453Z"
+  },
+  {
+    "id": "msg-1782043618008-9",
+    "name": "Test Sender",
+    "email": "sender@example.com",
+    "subject": "Hello Support",
+    "message": "This is a test message to verify the admin integration.",
+    "created_at": "2026-06-21T12:06:58.008Z"
+  }
+]

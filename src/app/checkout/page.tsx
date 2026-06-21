@@ -230,22 +230,15 @@ const CheckoutPage = () => {
             <h2 className={styles.sectionTitle}><User size={32} /> Dining <span>Details</span></h2>
             
             {/* Dining Options Selector Tabs */}
-            <div style={{ display: 'flex', gap: '15px', marginBottom: '35px' }}>
+            <div className={styles.diningTabs}>
               <button
                 type="button"
                 onClick={() => setDiningOption('dine_in')}
+                className={styles.diningTabBtn}
                 style={{
-                  flex: 1,
-                  padding: '16px',
                   border: diningOption === 'dine_in' ? '1px solid var(--primary)' : '1px solid rgba(212, 164, 75, 0.15)',
                   background: diningOption === 'dine_in' ? 'var(--primary)' : 'rgba(18, 13, 11, 0.5)',
                   color: diningOption === 'dine_in' ? 'black' : '#F5E6C8',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
                   boxShadow: diningOption === 'dine_in' ? '0 0 15px rgba(212, 164, 75, 0.3)' : 'none'
                 }}
               >
@@ -255,18 +248,11 @@ const CheckoutPage = () => {
               <button
                 type="button"
                 onClick={() => setDiningOption('takeaway')}
+                className={styles.diningTabBtn}
                 style={{
-                  flex: 1,
-                  padding: '16px',
                   border: diningOption === 'takeaway' ? '1px solid var(--primary)' : '1px solid rgba(212, 164, 75, 0.15)',
                   background: diningOption === 'takeaway' ? 'var(--primary)' : 'rgba(18, 13, 11, 0.5)',
                   color: diningOption === 'takeaway' ? 'black' : '#F5E6C8',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
                   boxShadow: diningOption === 'takeaway' ? '0 0 15px rgba(212, 164, 75, 0.3)' : 'none'
                 }}
               >
@@ -348,22 +334,11 @@ const CheckoutPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPaymentDetails(!showPaymentDetails)}
+                  className={styles.paymentTriggerBtn}
                   style={{
-                    width: '100%',
-                    padding: '16px',
                     border: showPaymentDetails ? '1px solid var(--primary)' : '1px solid rgba(212, 164, 75, 0.3)',
                     background: showPaymentDetails ? 'rgba(212, 164, 75, 0.1)' : 'rgba(18, 13, 11, 0.4)',
-                    color: showPaymentDetails ? 'var(--primary)' : '#F5E6C8',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '10px',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase'
+                    color: showPaymentDetails ? 'var(--primary)' : '#F5E6C8'
                   }}
                 >
                   <CreditCard size={16} />
@@ -376,38 +351,22 @@ const CheckoutPage = () => {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  style={{
-                    border: '1px solid rgba(212, 164, 75, 0.2)',
-                    background: 'rgba(18, 13, 11, 0.6)',
-                    padding: '25px',
-                    marginBottom: '20px',
-                    textAlign: 'center'
-                  }}
+                  className={styles.qrDetailsCard}
                 >
                   <p style={{ fontSize: '0.85rem', color: '#F5E6C8', marginBottom: '15px', lineHeight: 1.5 }}>
                     Scan the UPI QR Code to pay <strong>₹{totalPrice}</strong> and upload the payment screenshot below.
                   </p>
                   
                   {/* QR Code Container */}
-                  <div style={{
-                    width: '180px',
-                    height: '180px',
-                    background: 'white',
-                    margin: '0 auto 20px',
-                    padding: '10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 0 20px rgba(0,0,0,0.5)'
-                  }}>
+                  <div className={styles.qrContainer}>
                     <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=burgerhut@upi%26pn=TheBurgerHut%26am=${totalPrice}%26cu=INR`} 
-                      alt="UPI Payment QR Code" 
-                      style={{ width: '100%', height: '100%' }}
+                      src="/phonepe-qr.png?v=3" 
+                      alt="PhonePe Payment QR Code" 
+                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
                     />
                   </div>
-                  <div style={{ fontSize: '10px', letterSpacing: '0.1em', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '20px', fontWeight: 600 }}>
-                    UPI ID: burgerhut@upi
+                  <div style={{ fontSize: '11px', letterSpacing: '0.1em', color: 'var(--primary)', textTransform: 'uppercase', marginBottom: '20px', fontWeight: 700 }}>
+                    PhonePe: Sanjay Kumar
                   </div>
 
                   <div className={styles.formGroup} style={{ textAlign: 'left', marginBottom: 0 }}>

@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Header from "@/components/Header";
 import PromotionBanner from "@/components/PromotionBanner";
@@ -17,6 +18,43 @@ const floatingAnimation = (duration = 4, delay = 0) => ({
 });
 
 export default function ContactPage() {
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      alert('Please fill out Name, Email, and Message.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        setSuccess(true);
+        setFormData({ name: '', email: '', subject: '', message: '' });
+        setTimeout(() => setSuccess(false), 5000);
+      } else {
+        alert('Failed to send message. Please try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <main style={{ background: 'transparent', minHeight: '100vh', position: 'relative' }}>
       <Header />
@@ -55,16 +93,56 @@ export default function ContactPage() {
                 boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
               }}>
                 <h3 style={{ fontSize: '1.8rem', marginBottom: '30px', fontFamily: 'var(--font-cormorant)' }}>Send Us A Message</h3>
-                <form style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <input type="text" placeholder="YOUR NAME" style={inputStyle} />
-                    <input type="email" placeholder="EMAIL ADDRESS" style={inputStyle} />
+                    <input 
+                      type="text" 
+                      name="name" 
+                      required 
+                      value={formData.name} 
+                      onChange={handleInputChange} 
+                      placeholder="YOUR NAME" 
+                      style={inputStyle} 
+                    />
+                    <input 
+                      type="email" 
+                      name="email" 
+                      required 
+                      value={formData.email} 
+                      onChange={handleInputChange} 
+                      placeholder="EMAIL ADDRESS" 
+                      style={inputStyle} 
+                    />
                   </div>
-                  <input type="text" placeholder="SUBJECT" style={inputStyle} />
-                  <textarea placeholder="YOUR MESSAGE" rows={5} style={inputStyle}></textarea>
+                  <input 
+                    type="text" 
+                    name="subject" 
+                    value={formData.subject} 
+                    onChange={handleInputChange} 
+                    placeholder="SUBJECT" 
+                    style={inputStyle} 
+                  />
+                  <textarea 
+                    name="message" 
+                    required 
+                    value={formData.message} 
+                    onChange={handleInputChange} 
+                    placeholder="YOUR MESSAGE" 
+                    rows={5} 
+                    style={inputStyle}
+                  ></textarea>
+
+                  {success && (
+                    <div style={{ color: '#36B37E', fontSize: '0.9rem', fontWeight: 600, textAlign: 'center', background: 'rgba(54, 179, 126, 0.1)', padding: '10px', border: '1px solid rgba(54, 179, 126, 0.3)' }}>
+                      ✓ Message sent successfully! It will show up on the admin panel.
+                    </div>
+                  )}
+
                   <motion.button 
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={loading}
+                    whileHover={{ scale: loading ? 1 : 1.02 }}
+                    whileTap={{ scale: loading ? 1 : 0.98 }}
                     style={{
                       background: 'var(--primary)',
                       color: 'black',
@@ -72,7 +150,8 @@ export default function ContactPage() {
                       fontWeight: 700,
                       letterSpacing: '0.2em',
                       border: 'none',
-                      cursor: 'pointer',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.7 : 1,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -80,7 +159,7 @@ export default function ContactPage() {
                       marginTop: '10px'
                     }}
                   >
-                    SEND MESSAGE <Send size={18} />
+                    {loading ? 'SENDING...' : 'SEND MESSAGE'} <Send size={18} />
                   </motion.button>
                 </form>
               </div>

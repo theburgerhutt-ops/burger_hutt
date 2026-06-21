@@ -1,6 +1,6 @@
 {
   "title": "opening offer",
   "discountPercentage": 20,
-  "active": true,
+  "active": false,
   "expiryDate": "2026-06-20"
 }
