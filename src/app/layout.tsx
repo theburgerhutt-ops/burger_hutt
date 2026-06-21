@@ -5,6 +5,7 @@ import Chatbot from "@/components/Chatbot";
 import GlobalBackground from "@/components/GlobalBackground";
 import { CartProvider } from "@/context/CartContext";
 import TopOfferBanner from "@/components/TopOfferBanner";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 
 const cinzel = Cinzel({
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -41,6 +42,7 @@ export const metadata: Metadata = {
   description: "Experience the ultimate gourmet burger experience. AI-powered ordering, live tracking, and premium flavors at The Burger Hut.",
   keywords: ["burger", "cafe", "online ordering", "AI cafe", "The Burger Hut", "premium food"],
   authors: [{ name: "The Burger Hut Team" }],
+  manifest: "/manifest.json",
   openGraph: {
     title: "The Burger Hut | Premium AI-Powered Cafe",
     description: "Gourmet burgers and premium cafe experience with AI-powered ordering.",
@@ -63,6 +65,7 @@ export default function RootLayout({
           <TopOfferBanner />
           {children}
           <Chatbot />
+          <PWAInstallPrompt />
         </CartProvider>
       </body>
     </html>
