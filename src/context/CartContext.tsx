@@ -27,7 +27,16 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [dbOffer, setDbOffer] = useState<{ title: string; discountPercentage: number; active: boolean; expiryDate?: string } | null>(null);
+  const [dbOffer, setDbOffer] = useState<{ 
+    title: string; 
+    discountPercentage: number; 
+    active: boolean; 
+    expiryDate?: string;
+    thresholdActive?: boolean;
+    thresholdMinAmount?: number;
+    thresholdDiscountPercentage?: number;
+    thresholdTitle?: string;
+  } | null>(null);
 
   useEffect(() => {
     // Initial fetch
