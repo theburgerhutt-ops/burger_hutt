@@ -318,35 +318,67 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            style={{
-              padding: '12px 24px',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#ef4444',
-              textTransform: 'uppercase',
-              letterSpacing: '0.15em',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              background: 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
-              e.currentTarget.style.borderColor = '#ef4444';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-            }}
-          >
-            <LogOut size={14} /> {signingOut ? 'SIGNING OUT...' : 'SIGN OUT'}
-          </button>
+          <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <Link
+              href="/admin"
+              style={{
+                padding: '12px 24px',
+                border: '1px solid rgba(212, 164, 75, 0.4)',
+                color: 'var(--primary)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.15em',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                background: 'transparent',
+                textDecoration: 'none'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(212, 164, 75, 0.1)';
+                e.currentTarget.style.borderColor = 'var(--primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(212, 164, 75, 0.4)';
+              }}
+            >
+              <ShieldCheck size={14} /> ADMIN CONSOLE
+            </Link>
+
+            <button
+              onClick={handleSignOut}
+              disabled={signingOut}
+              style={{
+                padding: '12px 24px',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#ef4444',
+                textTransform: 'uppercase',
+                letterSpacing: '0.15em',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer',
+                background: 'transparent'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.borderColor = '#ef4444';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+              }}
+            >
+              <LogOut size={14} /> {signingOut ? 'SIGNING OUT...' : 'SIGN OUT'}
+            </button>
+          </div>
         </motion.div>
 
         {/* Share Feedback Collapsible Card */}

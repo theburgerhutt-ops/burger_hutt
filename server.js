@@ -29,6 +29,10 @@ app.prepare().then(() => {
       return;
     }
 
+    if (parsedUrl.pathname.startsWith('/socket.io')) {
+      return;
+    }
+
     handle(req, res, parsedUrl);
   });
 

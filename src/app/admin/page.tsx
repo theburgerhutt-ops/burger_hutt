@@ -202,10 +202,28 @@ export default function AdminDashboard() {
   const [newGalleryTitle, setNewGalleryTitle] = useState('');
 
   // 6. Global Offer State
-  const [activeGlobalOffer, setActiveGlobalOffer] = useState({ title: '', discountPercentage: 0, active: false, expiryDate: '' });
+  const [activeGlobalOffer, setActiveGlobalOffer] = useState({ 
+    title: '', 
+    discountPercentage: 0, 
+    active: false, 
+    expiryDate: '',
+    thresholdActive: true,
+    thresholdTitle: 'Gourmet Feast Special',
+    thresholdMinAmount: 400,
+    thresholdDiscountPercentage: 20
+  });
   const [newOfferTitle, setNewOfferTitle] = useState('');
   const [newOfferDiscount, setNewOfferDiscount] = useState<number | ''>('');
   const [newOfferExpiry, setNewOfferExpiry] = useState('');
+
+  // Threshold offer form input states
+  const [thresholdActive, setThresholdActive] = useState(true);
+  const [thresholdTitle, setThresholdTitle] = useState('Gourmet Feast Special');
+  const [thresholdMinAmount, setThresholdMinAmount] = useState<number | ''>(400);
+  const [thresholdDiscountPercentage, setThresholdDiscountPercentage] = useState<number | ''>(20);
+
+  // Sub-tab selection state inside Offers & Promos
+  const [offerSubTab, setOfferSubTab] = useState<'global' | 'threshold'>('global');
 
   // 7. Customer Reviews State (initialized clean)
   const [reviews, setReviews] = useState<any[]>([]);
@@ -358,7 +376,13 @@ export default function AdminDashboard() {
 
     fetch('/api/offer')
       .then(res => res.json())
-      .then(data => setActiveGlobalOffer(data))
+      .then(data => {
+        setActiveGlobalOffer(data);
+        if (data.thresholdActive !== undefined) setThresholdActive(data.thresholdActive);
+        if (data.thresholdTitle !== undefined) setThresholdTitle(data.thresholdTitle);
+        if (data.thresholdMinAmount !== undefined) setThresholdMinAmount(data.thresholdMinAmount);
+        if (data.thresholdDiscountPercentage !== undefined) setThresholdDiscountPercentage(data.thresholdDiscountPercentage);
+      })
       .catch(err => console.error("Failed to load offer:", err));
 
     const fetchOrders = async (isInitial = false) => {
@@ -367,7 +391,7 @@ export default function AdminDashboard() {
         if (!res.ok) throw new Error('Failed to fetch orders');
         const data = await res.json();
         
-        if (data && data.length > 0) {
+        if (data) {
           const mappedOrders = data.map((o: any) => ({
             id: o.id,
             order_id: o.order_id,
@@ -933,6 +957,28 @@ export default function AdminDashboard() {
       setActiveGlobalOffer(data.offer);
     } catch (err) {
       alert('Failed to toggle offer');
+    }
+  };
+
+  const handleSaveThresholdOffer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (thresholdMinAmount === '' || thresholdDiscountPercentage === '' || !thresholdTitle) return;
+    try {
+      const res = await fetch('/api/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thresholdActive,
+          thresholdTitle,
+          thresholdMinAmount: Number(thresholdMinAmount),
+          thresholdDiscountPercentage: Number(thresholdDiscountPercentage)
+        })
+      });
+      const data = await res.json();
+      setActiveGlobalOffer(data.offer);
+      alert('Threshold Discount Rule updated and synchronized!');
+    } catch (err) {
+      alert('Failed to update threshold rule');
     }
   };
 
@@ -2009,79 +2055,213 @@ export default function AdminDashboard() {
             )}
 
                 {activeTab === 'offers' && (
-              <div className="grid grid-cols-2 gap-6">
-                <div className={styles.card}>
-                  <h3>Global <span>Active Offer</span></h3>
-                  <div className="mt-4">
-                    {activeGlobalOffer.active ? (
-                      <div style={{ padding: '25px', background: 'rgba(212, 164, 75, 0.1)', border: '1px solid var(--primary)', borderRadius: '12px', textAlign: 'center' }}>
-                        <h4 style={{ color: 'white', marginBottom: '10px', fontSize: '1.2rem', fontFamily: 'var(--font-cormorant)' }}>{activeGlobalOffer.title}</h4>
-                        <p style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '10px' }}>{activeGlobalOffer.discountPercentage}% OFF</p>
-                        {activeGlobalOffer.expiryDate && (
-                          <p style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '20px' }}>
-                            Expires on: {new Date(activeGlobalOffer.expiryDate).toLocaleDateString('en-IN')}
-                          </p>
+              <div>
+                {/* Luxury inner sub-tabs navigation */}
+                <div style={{
+                  display: 'flex',
+                  gap: '10px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                  marginBottom: '25px',
+                  paddingBottom: '0px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setOfferSubTab('global')}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: offerSubTab === 'global' ? '2px solid var(--primary)' : '2px solid transparent',
+                      color: offerSubTab === 'global' ? 'var(--primary)' : 'rgba(255, 255, 255, 0.5)',
+                      padding: '12px 24px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      transition: 'all 0.3s ease',
+                      fontFamily: 'var(--font-poppins)'
+                    }}
+                  >
+                    Global Sitewide Offer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOfferSubTab('threshold')}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottom: offerSubTab === 'threshold' ? '2px solid var(--primary)' : '2px solid transparent',
+                      color: offerSubTab === 'threshold' ? 'var(--primary)' : 'rgba(255, 255, 255, 0.5)',
+                      padding: '12px 24px',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '0.75rem',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      transition: 'all 0.3s ease',
+                      fontFamily: 'var(--font-poppins)'
+                    }}
+                  >
+                    Order Value Discount Rule
+                  </button>
+                </div>
+
+                {offerSubTab === 'global' && (
+                  <div className="grid grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+                    <div className={styles.card}>
+                      <h3>Global <span>Active Offer</span></h3>
+                      <div className="mt-4">
+                        {activeGlobalOffer.active ? (
+                          <div style={{ padding: '25px', background: 'rgba(212, 164, 75, 0.1)', border: '1px solid var(--primary)', borderRadius: '12px', textAlign: 'center' }}>
+                            <h4 style={{ color: 'white', marginBottom: '10px', fontSize: '1.2rem', fontFamily: 'var(--font-cormorant)' }}>{activeGlobalOffer.title}</h4>
+                            <p style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.5rem', marginBottom: '10px' }}>{activeGlobalOffer.discountPercentage}% OFF</p>
+                            {activeGlobalOffer.expiryDate && (
+                              <p style={{ fontSize: '0.8rem', color: '#ccc', marginBottom: '20px' }}>
+                                Expires on: {new Date(activeGlobalOffer.expiryDate).toLocaleDateString('en-IN')}
+                              </p>
+                            )}
+                            <button onClick={() => toggleGlobalOffer(activeGlobalOffer.active)} style={{ background: 'transparent', border: '1px solid #FF3B30', color: '#FF3B30', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                              Deactivate Global Offer
+                            </button>
+                          </div>
+                        ) : (
+                          <div style={{ padding: '30px', opacity: 0.6, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: '12px' }}>
+                            <p>No active global offer right now.</p>
+                            {activeGlobalOffer.title && (
+                               <button onClick={() => toggleGlobalOffer(activeGlobalOffer.active)} style={{ marginTop: '20px', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+                                 Reactivate Previous: {activeGlobalOffer.title}
+                               </button>
+                            )}
+                          </div>
                         )}
-                        <button onClick={() => toggleGlobalOffer(activeGlobalOffer.active)} style={{ background: 'transparent', border: '1px solid #FF3B30', color: '#FF3B30', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
-                          Deactivate Global Offer
+                      </div>
+                    </div>
+
+                    {/* Create Promo Code form */}
+                    <div className={styles.card}>
+                      <h3>Create & Publish <span>Global Offer</span></h3>
+                      <form onSubmit={handlePublishOffer}>
+                        <div className={styles.formGroup}>
+                          <label>Offer Title / Banner Text</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Weekend Flash Sale!" 
+                            value={newOfferTitle}
+                            onChange={(e) => setNewOfferTitle(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className={styles.formGroup + " mt-4"}>
+                          <label>Discount Percentage (%)</label>
+                          <input 
+                            type="number" 
+                            placeholder="e.g. 20" 
+                            min="1" max="100"
+                            value={newOfferDiscount}
+                            onChange={(e) => setNewOfferDiscount(e.target.value === '' ? '' : Number(e.target.value))}
+                            required
+                          />
+                        </div>
+
+                        <div className={styles.formGroup + " mt-4"}>
+                          <label>Offer Expiry Date</label>
+                          <input 
+                            type="date" 
+                            min={new Date().toISOString().split('T')[0]}
+                            value={newOfferExpiry}
+                            onChange={(e) => setNewOfferExpiry(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <button type="submit" className={styles.submitBtn}>
+                          <Plus size={16} /> Deploy & Publish Global Offer
                         </button>
-                      </div>
-                    ) : (
-                      <div style={{ padding: '30px', opacity: 0.6, textAlign: 'center', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: '12px' }}>
-                        <p>No active global offer right now.</p>
-                        {activeGlobalOffer.title && (
-                           <button onClick={() => toggleGlobalOffer(activeGlobalOffer.active)} style={{ marginTop: '20px', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
-                             Reactivate Previous: {activeGlobalOffer.title}
-                           </button>
-                        )}
-                      </div>
-                    )}
+                      </form>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Create Promo Code form */}
-                <div className={styles.card}>
-                  <h3>Create & Publish <span>Global Offer</span></h3>
-                  <form onSubmit={handlePublishOffer}>
-                    <div className={styles.formGroup}>
-                      <label>Offer Title / Banner Text</label>
-                      <input 
-                        type="text" 
-                        placeholder="e.g. Weekend Flash Sale!" 
-                        value={newOfferTitle}
-                        onChange={(e) => setNewOfferTitle(e.target.value)}
-                        required
-                      />
+                {offerSubTab === 'threshold' && (
+                  <div className="grid grid-cols-2 gap-6" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+                    {/* Dynamic Threshold Offer Rule form */}
+                    <div className={styles.card}>
+                      <h3>Threshold <span>Discount Rule</span></h3>
+                      <form onSubmit={handleSaveThresholdOffer}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                          <label className={styles.switch}>
+                            <input 
+                              type="checkbox" 
+                              checked={thresholdActive}
+                              onChange={(e) => setThresholdActive(e.target.checked)}
+                            />
+                            <span className={styles.slider}></span>
+                          </label>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'white' }}>
+                            {thresholdActive ? '✓ Rule Enabled' : '⌛ Rule Disabled'}
+                          </span>
+                        </div>
+
+                        <div className={styles.formGroup}>
+                          <label>Offer Rule Name</label>
+                          <input 
+                            type="text" 
+                            placeholder="e.g. Gourmet Feast Special" 
+                            value={thresholdTitle}
+                            onChange={(e) => setThresholdTitle(e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+                          <div className={styles.formGroup} style={{ flex: 1 }}>
+                            <label>Min Bill Amount (₹)</label>
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 400" 
+                              min="0"
+                              value={thresholdMinAmount}
+                              onChange={(e) => setThresholdMinAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                              required
+                            />
+                          </div>
+
+                          <div className={styles.formGroup} style={{ flex: 1 }}>
+                            <label>Discount (%)</label>
+                            <input 
+                              type="number" 
+                              placeholder="e.g. 20" 
+                              min="1" max="100"
+                              value={thresholdDiscountPercentage}
+                              onChange={(e) => setThresholdDiscountPercentage(e.target.value === '' ? '' : Number(e.target.value))}
+                              required
+                            />
+                          </div>
+                        </div>
+
+                        <button type="submit" className={styles.submitBtn} style={{ marginTop: '20px' }}>
+                          <Plus size={16} /> Save & Apply Discount Rule
+                        </button>
+                      </form>
                     </div>
 
-                    <div className={styles.formGroup + " mt-4"}>
-                      <label>Discount Percentage (%)</label>
-                      <input 
-                        type="number" 
-                        placeholder="e.g. 20" 
-                        min="1" max="100"
-                        value={newOfferDiscount}
-                        onChange={(e) => setNewOfferDiscount(e.target.value === '' ? '' : Number(e.target.value))}
-                        required
-                      />
+                    {/* Offer Logic Help / Guide */}
+                    <div className={styles.card} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                      <h3>Discount <span>Rule Explanation</span></h3>
+                      <div style={{ padding: '20px', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(212, 164, 75, 0.1)', borderRadius: '12px', marginTop: '15px' }}>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>
+                          This rule allows you to reward customers who place large orders. When enabled:
+                        </p>
+                        <ul style={{ color: 'white', fontSize: '0.85rem', lineHeight: '1.8', margin: '10px 0 0 0', paddingLeft: '20px' }}>
+                          <li>If the customer's cart subtotal reaches <strong style={{ color: 'var(--primary)' }}>₹{thresholdMinAmount || '0'}</strong> or more, they automatically receive a <strong style={{ color: 'var(--primary)' }}>{thresholdDiscountPercentage || '0'}% discount</strong>.</li>
+                          <li>For smaller carts, a dynamic progress banner prompts the user with the exact amount needed to unlock the discount.</li>
+                          <li>If a global offer (like a Weekend Flash Sale) is active and has a higher discount rate, the system will apply the higher rate to protect the customer.</li>
+                        </ul>
+                      </div>
                     </div>
-
-                    <div className={styles.formGroup + " mt-4"}>
-                      <label>Offer Expiry Date</label>
-                      <input 
-                        type="date" 
-                        min={new Date().toISOString().split('T')[0]}
-                        value={newOfferExpiry}
-                        onChange={(e) => setNewOfferExpiry(e.target.value)}
-                        required
-                      />
-                    </div>
-
-                    <button type="submit" className={styles.submitBtn}>
-                      <Plus size={16} /> Deploy & Publish Global Offer
-                    </button>
-                  </form>
-                </div>
+                  </div>
+                )}
               </div>
             )}
 

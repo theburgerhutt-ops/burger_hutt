@@ -1,0 +1,24 @@
+{
+  "name": "Burger Hut Admin",
+  "short_name": "BH Admin",
+  "description": "Store Management Console - The Burger Hut",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#0a0705",
+  "theme_color": "#d4a44b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

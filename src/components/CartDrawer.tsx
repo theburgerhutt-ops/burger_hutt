@@ -11,7 +11,18 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  const { cart, updateQuantity, removeFromCart, totalPrice, originalPrice, activeOffer, totalItems } = useCart();
+  const { 
+    cart, 
+    updateQuantity, 
+    removeFromCart, 
+    totalPrice, 
+    originalPrice, 
+    activeOffer, 
+    totalItems,
+    thresholdActive,
+    thresholdMinAmount,
+    thresholdDiscountPercentage
+  } = useCart();
 
   return (
     <AnimatePresence>
@@ -76,6 +87,21 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
             {cart.length > 0 && (
               <div className={styles.footer}>
+                {thresholdActive && originalPrice < thresholdMinAmount && (
+                  <div style={{
+                    background: 'rgba(212, 164, 75, 0.05)',
+                    border: '1px dashed rgba(212, 164, 75, 0.3)',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    marginBottom: '16px',
+                    textAlign: 'center',
+                    fontSize: '0.8rem',
+                    color: '#D4A44B',
+                    lineHeight: '1.4'
+                  }}>
+                    ✨ Add <strong style={{ color: '#fff' }}>₹{thresholdMinAmount - originalPrice}</strong> more to unlock <strong style={{ color: '#fff' }}>{thresholdDiscountPercentage}% OFF</strong> on your order!
+                  </div>
+                )}
                 <div className={styles.summaryLine}>
                   <span>Subtotal</span>
                   <span style={{ textDecoration: activeOffer?.active ? 'line-through' : 'none', opacity: activeOffer?.active ? 0.6 : 1 }}>
