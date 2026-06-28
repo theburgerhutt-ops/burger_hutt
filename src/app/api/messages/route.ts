@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+export const dynamic = 'force-dynamic';
+
 const LOCAL_MESSAGES_FILE = path.join(process.cwd(), 'src/data/local_messages.json');
 
 const getLocalMessages = (): any[] => {

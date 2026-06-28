@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
+export const dynamic = 'force-dynamic';
+
 const LOCAL_ORDERS_FILE = path.join(process.cwd(), 'src/data/local_orders.json');
 
 const getLocalOrders = (): any[] => {

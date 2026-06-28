@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
+export const dynamic = 'force-dynamic';
+
 const OFFER_FILE = path.join(process.cwd(), 'src', 'data', 'active_offer.json');
 
 const getActiveOffer = () => {

@@ -380,7 +380,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     let knownOrderIds = new Set<string>();
 
-    fetch('/api/offer')
+    fetch('/api/offer', { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
         setActiveGlobalOffer(data);
@@ -393,7 +393,7 @@ export default function AdminDashboard() {
 
     const fetchOrders = async (isInitial = false) => {
       try {
-        const res = await fetch('/api/orders');
+        const res = await fetch('/api/orders', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch orders');
         const data = await res.json();
         
@@ -1038,7 +1038,7 @@ export default function AdminDashboard() {
 
   const fetchMessages = async () => {
     try {
-      const res = await fetch('/api/messages');
+      const res = await fetch('/api/messages', { cache: 'no-store' });
       if (!res.ok) throw new Error('Failed to fetch messages');
       const data = await res.json();
       setMessages(data);
