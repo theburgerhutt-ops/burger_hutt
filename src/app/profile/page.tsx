@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LogOut, ShoppingBag, Clock, Heart, Calendar, ShieldCheck, User, Bell, Star, Upload, Trash2 } from 'lucide-react';
 import Header from '@/components/Header';
 import { supabase } from '@/lib/supabase';
-import { getUser } from '@/app/actions/auth';
+import { getUser, signOut } from '@/app/actions/auth';
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
@@ -122,7 +122,12 @@ export default function ProfilePage() {
 
   async function handleSignOut() {
     setSigningOut(true);
-    await supabase.auth.signOut();
+    try {
+      await signOut();
+    } catch (err) {
+      console.warn("Signout server action failed, trying client fallback:", err);
+      await supabase.auth.signOut();
+    }
     router.push('/');
     router.refresh();
   }

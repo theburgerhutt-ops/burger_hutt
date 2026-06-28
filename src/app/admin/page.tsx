@@ -472,6 +472,13 @@ export default function AdminDashboard() {
     fetchReviews();
     fetchMessages();
 
+    // Fallback polling for serverless environments (like Vercel)
+    const pollingInterval = setInterval(() => {
+      fetchOrders(false);
+      fetchReviews();
+      fetchMessages();
+    }, 10000); // Check for updates every 10 seconds
+
     // Set up Socket.io client
     const socket = io(); // Connects to current host
 
@@ -600,6 +607,7 @@ export default function AdminDashboard() {
     return () => {
       socket.disconnect();
       subscription.unsubscribe();
+      clearInterval(pollingInterval);
     };
   }, []);
 
