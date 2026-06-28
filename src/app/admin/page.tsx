@@ -20,7 +20,8 @@ import {
   Bell, 
   X,
   Download,
-  Mail 
+  Mail,
+  Menu
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { menuData } from '@/data/menu';
@@ -99,6 +100,11 @@ const defaultMockReviews = [
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'menu' | 'inventory' | 'staff' | 'gallery' | 'offers' | 'reviews' | 'messages' | 'settings'>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [activeTab]);
   const [messages, setMessages] = useState<any[]>([]);
   const [toast, setToast] = useState<{ id: string; title: string; body: string; time: string } | null>(null);
   const [selectedScreenshot, setSelectedScreenshot] = useState<string | null>(null);
@@ -1105,13 +1111,26 @@ export default function AdminDashboard() {
 
   return (
     <div className="container">
+      {isMobileMenuOpen && (
+        <div 
+          className={styles.sidebarBackdrop} 
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
       <div className={styles.adminPage}>
         <div className={styles.dashboardGrid}>
           
           {/* Side Navigation Bar */}
-          <aside className={styles.sidebar}>
-            <div className={styles.sidebarHeader}>
+          <aside className={`${styles.sidebar} ${isMobileMenuOpen ? styles.sidebarOpen : ''}`}>
+            <div className={styles.sidebarHeader} style={{ position: 'relative' }}>
               <h2>Burger<span>Hut</span> Admin</h2>
+              <button 
+                className={styles.closeSidebarBtn}
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Close Menu"
+              >
+                <X size={20} />
+              </button>
             </div>
             
             <nav className={styles.nav}>
@@ -1182,7 +1201,10 @@ export default function AdminDashboard() {
                 View Live Site
               </a>
               <button 
-                onClick={handleLogout} 
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }} 
                 className={styles.viewWebsiteBtn}
                 style={{ 
                   background: 'rgba(239, 68, 68, 0.1)', 
@@ -1201,12 +1223,21 @@ export default function AdminDashboard() {
             
             {/* Header section area */}
             <div className={styles.headerArea}>
-              <div>
-                <h1 className="font-cormorant">
-                  Console <span>{activeTab}</span>
-                </h1>
-                <div className={styles.headerSubtitle}>
-                  Burger Hut Luxury Management System
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <button 
+                  className={styles.hamburgerBtn}
+                  onClick={() => setIsMobileMenuOpen(true)}
+                  aria-label="Open Menu"
+                >
+                  <Menu size={20} />
+                </button>
+                <div>
+                  <h1 className="font-cormorant">
+                    Console <span>{activeTab}</span>
+                  </h1>
+                  <div className={styles.headerSubtitle}>
+                    Burger Hut Luxury Management System
+                  </div>
                 </div>
               </div>
 
@@ -2738,7 +2769,7 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px' }}>
+            <div className={styles.walkInGrid}>
               
               {/* Left Column: Customer & Payment Details */}
               <div className="space-y-4">
@@ -2785,7 +2816,7 @@ export default function AdminDashboard() {
                   Billing & Status
                 </h4>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '12px' }}>
+                <div className={styles.walkInDouble}>
                   <div className={styles.formGroup}>
                     <label>Payment Method</label>
                     <select
@@ -2833,7 +2864,7 @@ export default function AdminDashboard() {
 
                 {/* Add Item form strip */}
                 <div style={{ background: 'rgba(212, 164, 75, 0.05)', border: '1px solid rgba(212, 164, 75, 0.15)', borderRadius: '12px', padding: '15px', marginBottom: '15px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <div className={styles.walkInItemStrip}>
                     <div>
                       <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '4px' }}>Category</label>
                       <select 

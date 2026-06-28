@@ -1029,3 +1029,200 @@
   border: 1px solid rgba(255, 86, 48, 0.2);
   border-radius: 10px;
 }
+
+/* Sidebar backdrop, hamburger button and close button */
+.sidebarBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 999;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.hamburgerBtn {
+  display: none;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(212, 164, 75, 0.25);
+  color: var(--primary);
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.hamburgerBtn:hover {
+  background: rgba(212, 164, 75, 0.1);
+  border-color: var(--primary);
+}
+
+.closeSidebarBtn {
+  display: none;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: #fff;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.3s ease, opacity 0.3s ease;
+}
+
+.closeSidebarBtn:hover {
+  opacity: 1;
+  color: var(--primary);
+}
+
+/* Walk-in Modal Styling */
+.walkInGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 30px;
+}
+
+.walkInDouble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-top: 12px;
+}
+
+.walkInItemStrip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* Media Queries */
+@media (max-width: 1024px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: -320px; /* Hidden offscreen */
+    width: 300px;
+    height: 100vh;
+    border-radius: 0 30px 30px 0;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.8);
+    background: rgba(18, 13, 11, 0.98);
+    backdrop-filter: blur(25px);
+  }
+
+  .sidebar.sidebarOpen {
+    left: 0;
+  }
+
+  .hamburgerBtn {
+    display: flex;
+  }
+
+  .closeSidebarBtn {
+    display: block;
+  }
+  
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .adminPage {
+    padding: 100px 0 40px;
+  }
+  
+  .headerArea {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  
+  .headerArea button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .statsRow {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .statCard {
+    padding: 20px;
+  }
+  
+  .card {
+    padding: 20px;
+  }
+  
+  .dashboardControls {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .controlGrid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .formRow {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .inventoryGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .staffGrid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  
+  .galleryGrid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+  
+  .couponGrid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+  }
+
+  .walkInGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .loginCard {
+    padding: 30px 20px;
+  }
+  
+  .loginHeader h2 {
+    font-size: 1.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .walkInDouble {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .walkInItemStrip {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
